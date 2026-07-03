@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+"$repo_root/.githooks/check-staged-secrets.sh"
+"$repo_root/.githooks/check-staged-l10n.sh"
+
+echo "Running unit tests..."
+composer --working-dir="$repo_root" test:unit

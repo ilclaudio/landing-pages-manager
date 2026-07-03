@@ -18,9 +18,9 @@
 	"scripts": {
 		"lint": "@php vendor/bin/phpcs --standard=phpcs.xml.dist",
 		"lint:fix": "@php vendor/bin/phpcbf --standard=phpcs.xml.dist",
-		"test": "phpunit",
-		"test:unit": "phpunit --testsuite unit",
-		"test:integration": "phpunit -c phpunit-integration.xml --testsuite integration",
+		"test": "@php vendor/bin/phpunit",
+		"test:unit": "@php vendor/bin/phpunit --testsuite unit",
+		"test:integration": "@php vendor/bin/phpunit -c phpunit-integration.xml --testsuite integration",
 		"test:e2e": "npm run test:e2e",
 		"test:all": [
 			"@test:unit",
