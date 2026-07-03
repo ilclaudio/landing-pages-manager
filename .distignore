@@ -1,0 +1,57 @@
+# .distignore — KK Landing Pages Manager
+# Files and folders excluded from the WordPress.org SVN distribution.
+# Read by: wp dist-archive, 10up/action-wordpress-plugin-deploy, and compatible deploy scripts.
+
+# Version control
+.git
+.gitignore
+.gitattributes
+.githooks
+.distignore
+
+# Composer / PHP dev dependencies
+vendor
+composer.json
+composer.lock
+.composer-cache
+.composer-home
+
+# Node / E2E dev tooling
+node_modules
+package.json
+package-lock.json
+playwright.config.js
+playwright-report
+test-results
+
+# Test suite
+tests
+phpunit.xml
+phpunit-integration.xml
+.phpunit.result.cache
+
+# Code quality tooling
+phpcs.xml.dist
+
+# Development and documentation (internal)
+DEV
+AGENTS.MD
+CLAUDE.MD
+SETUP
+DOC
+README.md
+CHANGELOG.md
+VERSION.txt
+
+# AI assistant context
+.claude
+.codex
+.codex-tmp
+
+# Editor / IDE
+.editorconfig
+.vscode
+
+# OS artifacts
+.DS_Store
+Thumbs.db

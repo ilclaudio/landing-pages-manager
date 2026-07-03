@@ -1,0 +1,42 @@
+{
+  "phpcs.enable": true,
+  "phpcs.executablePath": "vendor/bin/phpcs.bat",
+  "phpcs.standard": "phpcs.xml.dist",
+  "intelephense.environment.includePaths": [
+    "${workspaceFolder}/../../.."
+  ],
+	"markdown.preview.mermaid": true,
+  "intelephense.stubs": [
+    "Core",
+    "standard",
+    "date",
+    "json",
+    "filter",
+    "hash",
+    "pcre",
+    "SPL",
+    "session",
+    "zlib",
+    "mbstring",
+    "openssl",
+    "tokenizer",
+    "xml",
+    "curl",
+    "intl",
+    "mysqli",
+    "PDO",
+    "wordpress"
+  ],
+  "cSpell.words": [
+    "termitem"
+  ],
+  "cSpell.enabled": false,
+  "files.eol": "\n",
+  "search.followSymlinks": true,
+  "terminal.integrated.env.windows": {
+    "TEMP": "${workspaceFolder}\\.codex-tmp",
+    "TMP": "${workspaceFolder}\\.codex-tmp",
+    "COMPOSER_HOME": "${workspaceFolder}\\.composer-home",
+    "COMPOSER_CACHE_DIR": "${workspaceFolder}\\.composer-cache"
+  }
+}
