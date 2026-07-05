@@ -239,6 +239,35 @@ class KKLPM_Domain_Map_Repository {
 	}
 
 	/**
+	 * Find active candidate mappings for a request's host and path in a single query.
+	 *
+	 * Matches `subdomain` and `external` mappings against the host and `subpath`
+	 * mappings against the path, replacing what would otherwise be three
+	 * separate calls to `find_matching_candidates()` with one round-trip.
+	 *
+	 * @param string $normalized_host Normalized request host.
+	 * @param string $normalized_path Normalized request path.
+	 * @return array
+	 */
+	public static function find_request_candidates( $normalized_host, $normalized_path ) {
+		global $wpdb;
+		$table_name = self::get_table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Intentional repository read for plugin-owned table.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table_name} WHERE active = 1 AND ( ( type = 'subdomain' AND value = %s ) OR ( type = 'external' AND value = %s ) OR ( type = 'subpath' AND value = %s ) ) ORDER BY id ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Plugin-owned table name.
+				(string) $normalized_host,
+				(string) $normalized_host,
+				(string) $normalized_path
+			),
+			ARRAY_A
+		);
+
+		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
 	 * Normalize mapping data before persistence.
 	 *
 	 * @param array $data Raw mapping data.

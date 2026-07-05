@@ -179,11 +179,7 @@ class KKLPM_Domain_Router_Module {
 	protected function find_matching_mapping( $host, $path ) {
 		$normalized_host = KKLPM_Domain_Router_Matcher::normalize_host( $host );
 		$normalized_path = KKLPM_Domain_Router_Matcher::normalize_request_path( $path );
-		$candidates      = array_merge(
-			KKLPM_Domain_Map_Repository::find_matching_candidates( 'subdomain', $normalized_host ),
-			KKLPM_Domain_Map_Repository::find_matching_candidates( 'external', $normalized_host ),
-			KKLPM_Domain_Map_Repository::find_matching_candidates( 'subpath', $normalized_path )
-		);
+		$candidates      = KKLPM_Domain_Map_Repository::find_request_candidates( $normalized_host, $normalized_path );
 
 		return KKLPM_Domain_Router_Matcher::match_request(
 			$normalized_host,

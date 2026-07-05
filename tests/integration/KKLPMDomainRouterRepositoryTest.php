@@ -148,6 +148,54 @@ class KKLPMDomainRouterRepositoryTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Ensures find_request_candidates() finds subdomain/external/subpath matches in one call.
+	 *
+	 * @return void
+	 */
+	public function test_find_request_candidates_matches_host_and_path_mappings_in_one_call() {
+		$page_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'page',
+				'post_status' => 'publish',
+			)
+		);
+
+		$subdomain_id = KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'    => 'subdomain',
+				'value'   => 'promo.example.org',
+				'page_id' => $page_id,
+				'active'  => 1,
+			)
+		);
+
+		$subpath_id = KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'    => 'subpath',
+				'value'   => '/promo',
+				'page_id' => $page_id,
+				'active'  => 1,
+			)
+		);
+
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'    => 'external',
+				'value'   => 'unrelated.example.net',
+				'page_id' => $page_id,
+				'active'  => 1,
+			)
+		);
+
+		$candidates    = KKLPM_Domain_Map_Repository::find_request_candidates( 'promo.example.org', '/promo' );
+		$candidate_ids = array_map( 'intval', wp_list_pluck( $candidates, 'id' ) );
+
+		$this->assertCount( 2, $candidates );
+		$this->assertContains( $subdomain_id, $candidate_ids );
+		$this->assertContains( $subpath_id, $candidate_ids );
+	}
+
+	/**
 	 * Ensures unsupported mapping types are rejected early.
 	 *
 	 * @return void
