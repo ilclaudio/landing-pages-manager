@@ -31,6 +31,15 @@ class KKLPM_Plugin {
 	}
 
 	/**
+	 * Runs plugin activation tasks.
+	 *
+	 * @return void
+	 */
+	public static function activate() {
+		KKLPM_Domain_Map_Repository::create_table();
+	}
+
+	/**
 	 * Registers plugin modules.
 	 *
 	 * @return void

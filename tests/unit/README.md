@@ -57,7 +57,7 @@ composer test:unit
 Current expected baseline:
 
 ```text
-OK (7 tests, 19 assertions)
+OK (13 tests, 28 assertions)
 ```
 
 The exact number will grow as the plugin grows.
@@ -84,18 +84,21 @@ The first unit suite currently covers:
 - `KKLPM_Path_Utils::normalize_route_path()`
 - `KKLPM_Landing_Page_Meta` key definitions
 - `KKLPM_Landing_Page_View` pure landing page decisions
+- `KKLPM_Domain_Router_Matcher` host/path normalization and mapping matches
 
 Current test file:
 
 - `tests/unit/KKLPMPathUtilsTest.php`
 - `tests/unit/KKLPM_Landing_Page_Meta_Test.php`
 - `tests/unit/KKLPM_Landing_Page_View_Test.php`
+- `tests/unit/KKLPM_Domain_Router_Matcher_Test.php`
 
 Current source under test:
 
 - `includes/utils/class-kklpm-path-utils.php`
 - `includes/core/class-kklpm-landing-page-meta.php`
 - `includes/core/class-kklpm-landing-page-view.php`
+- `includes/domain-router/class-kklpm-domain-router-matcher.php`
 
 ---
 
