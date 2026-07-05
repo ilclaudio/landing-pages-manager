@@ -193,7 +193,11 @@ class KKLPM_Domain_Router_Module {
 	}
 
 	/**
-	 * Whether a matched subpath mapping collides with an existing page path.
+	 * Whether a matched subpath mapping collides with existing WordPress content.
+	 *
+	 * Checks both a direct page-path lookup (works regardless of permalink
+	 * structure) and `url_to_postid()` (also covers other public post types and
+	 * archives, but only resolves when the site uses pretty permalinks).
 	 *
 	 * @param array  $matched_mapping Matched mapping row.
 	 * @param string $normalized_path Normalized request path.
@@ -211,8 +215,13 @@ class KKLPM_Domain_Router_Module {
 			return false;
 		}
 
-		$existing_page = get_page_by_path( $requested_path );
+		$existing_page    = get_page_by_path( $requested_path );
+		$existing_post_id = $existing_page instanceof WP_Post ? (int) $existing_page->ID : 0;
 
-		return $existing_page instanceof WP_Post && (int) $existing_page->ID !== $target_page_id;
+		if ( ! $existing_post_id ) {
+			$existing_post_id = url_to_postid( home_url( $normalized_path ) );
+		}
+
+		return 0 !== $existing_post_id && $existing_post_id !== $target_page_id;
 	}
 }

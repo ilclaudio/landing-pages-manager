@@ -38,6 +38,7 @@ class KKLPMDomainRouterModuleTest extends WP_UnitTestCase {
 	public function tear_down() {
 		$this->truncate_domain_map_table();
 		unset( $_SERVER['HTTP_HOST'] );
+		$this->set_permalink_structure( '' );
 		parent::tear_down();
 	}
 
@@ -223,6 +224,46 @@ class KKLPMDomainRouterModuleTest extends WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'page_id', $wp->query_vars );
 		$this->assertSame( 'promo', $wp->query_vars['pagename'] );
 		$this->assertNotSame( $target_page_id, $native_page_id );
+	}
+
+	/**
+	 * Ensures a subpath mapping does not hijack a non-page post at the same path.
+	 *
+	 * @return void
+	 */
+	public function test_parse_request_keeps_native_post_when_subpath_mapping_collides_with_non_page_content() {
+		$this->set_permalink_structure( '/%postname%/' );
+
+		$native_post_id = self::factory()->post->create(
+			array(
+				'post_title'  => 'Promo',
+				'post_name'   => 'promo',
+				'post_type'   => 'post',
+				'post_status' => 'publish',
+			)
+		);
+		$target_page_id = $this->create_published_page( 'mapped-target' );
+
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'    => 'subpath',
+				'value'   => '/promo',
+				'page_id' => $target_page_id,
+				'active'  => 1,
+			)
+		);
+
+		$wp = new WP();
+		$wp->request = 'promo';
+		$wp->query_vars = array(
+			'pagename' => 'promo',
+		);
+
+		$this->module->handle_parse_request( $wp );
+
+		$this->assertArrayNotHasKey( 'page_id', $wp->query_vars );
+		$this->assertSame( 'promo', $wp->query_vars['pagename'] );
+		$this->assertNotSame( $target_page_id, $native_post_id );
 	}
 
 	/**
