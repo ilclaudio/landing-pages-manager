@@ -57,7 +57,7 @@ composer test:unit
 Current expected baseline:
 
 ```text
-OK (3 tests, 3 assertions)
+OK (4 tests, 7 assertions)
 ```
 
 The exact number will grow as the plugin grows.
@@ -82,14 +82,17 @@ booting WordPress.
 The first unit suite currently covers:
 
 - `KKLPM_Path_Utils::normalize_route_path()`
+- `KKLPM_Landing_Page_Meta` key definitions
 
 Current test file:
 
 - `tests/unit/KKLPMPathUtilsTest.php`
+- `tests/unit/KKLPM_Landing_Page_Meta_Test.php`
 
 Current source under test:
 
 - `includes/utils/class-kklpm-path-utils.php`
+- `includes/core/class-kklpm-landing-page-meta.php`
 
 ---
 

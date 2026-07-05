@@ -193,6 +193,8 @@ The first smoke test should prove that:
 - the plugin main file loads
 - `KKLPM_VERSION` is defined
 - `KKLPM_Path_Utils` is available inside WordPress
+- the landing page module classes are loaded
+- the plugin registers the `init`, `add_meta_boxes`, `save_post_page`, and `template_include` hooks used by the current landing page slice
 
 Current first integration test:
 

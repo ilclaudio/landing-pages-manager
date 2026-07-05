@@ -10,3 +10,4 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 require_once dirname( __DIR__ ) . '/includes/utils/class-kklpm-path-utils.php';
+require_once dirname( __DIR__ ) . '/includes/core/class-kklpm-landing-page-meta.php';
