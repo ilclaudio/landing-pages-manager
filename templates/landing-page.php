@@ -12,13 +12,14 @@ $html_content = KKLPM_Landing_Page_Meta::get_content( $post_id, KKLPM_Landing_Pa
 $css_content  = KKLPM_Landing_Page_Meta::get_content( $post_id, KKLPM_Landing_Page_Meta::CSS );
 $js_content   = KKLPM_Landing_Page_Meta::get_content( $post_id, KKLPM_Landing_Page_Meta::JS );
 
-if ( '' === trim( $html_content ) ) {
-	$html_content = sprintf(
+$html_content = KKLPM_Landing_Page_View::resolve_html_content(
+	$html_content,
+	sprintf(
 		'<section class="kklpm-placeholder"><h1>%s</h1><p>%s</p></section>',
 		esc_html__( 'Landing page ready', 'landing-pages-manager' ),
 		esc_html__( 'Add custom HTML, CSS, and JavaScript in the Landing Page panel to start building this page.', 'landing-pages-manager' )
-	);
-}
+	)
+);
 
 ?><!DOCTYPE html>
 <html <?php language_attributes(); ?>>

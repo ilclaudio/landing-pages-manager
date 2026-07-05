@@ -23,6 +23,7 @@ define( 'KKLPM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
 require_once KKLPM_PLUGIN_DIR . 'includes/utils/class-kklpm-path-utils.php';
 require_once KKLPM_PLUGIN_DIR . 'includes/core/class-kklpm-landing-page-meta.php';
+require_once KKLPM_PLUGIN_DIR . 'includes/core/class-kklpm-landing-page-view.php';
 require_once KKLPM_PLUGIN_DIR . 'includes/core/class-kklpm-landing-page-module.php';
 require_once KKLPM_PLUGIN_DIR . 'includes/core/class-kklpm-plugin.php';
 

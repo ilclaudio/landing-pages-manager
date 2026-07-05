@@ -199,6 +199,18 @@ The first smoke test should prove that:
 Current first integration test:
 
 - `tests/integration/KKLPMPluginBootstrapTest.php`
+- `tests/integration/KKLPMLandingPageModuleTest.php`
+
+Current covered behaviors include:
+
+- plugin bootstrap constants and class loading
+- registration of core hooks for i18n and landing page behavior
+- `template_include` switching for enabled vs disabled landing pages
+- secure saving of landing page meta values
+- persistence of HTML/CSS/JS content after disabling landing mode
+- capability and nonce guardrails on landing page saves
+- meta box rendering differences when the landing page toggle is on or off
+- frontend placeholder rendering when no landing page HTML has been saved
 
 ---
 

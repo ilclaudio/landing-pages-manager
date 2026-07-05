@@ -155,7 +155,10 @@ class KKLPM_Landing_Page_Module {
 			return;
 		}
 
-		$enabled = isset( $_POST['kklpm_landing_enabled'] ) ? '1' : '0'; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce is verified in can_save_meta_box().
+		$enabled_input = isset( $_POST['kklpm_landing_enabled'] ) ? sanitize_text_field( wp_unslash( $_POST['kklpm_landing_enabled'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce is verified in can_save_meta_box().
+		$enabled       = KKLPM_Landing_Page_View::normalize_enabled_value(
+			$enabled_input
+		);
 		update_post_meta( $post_id, KKLPM_Landing_Page_Meta::ENABLED, $enabled );
 
 		if ( ! current_user_can( 'unfiltered_html' ) ) {
@@ -174,23 +177,18 @@ class KKLPM_Landing_Page_Module {
 	 * @return string
 	 */
 	public function filter_template_include( $template ) {
-		if ( ! is_singular( 'page' ) ) {
-			return $template;
-		}
-
-		$post_id = get_queried_object_id();
-
-		if ( ! $post_id || ! KKLPM_Landing_Page_Meta::is_enabled( $post_id ) ) {
-			return $template;
-		}
-
+		$post_id          = get_queried_object_id();
 		$landing_template = KKLPM_PLUGIN_DIR . 'templates/landing-page.php';
+		$landing_enabled  = $post_id ? KKLPM_Landing_Page_Meta::is_enabled( $post_id ) : false;
 
-		if ( file_exists( $landing_template ) ) {
-			return $landing_template;
-		}
-
-		return $template;
+		return KKLPM_Landing_Page_View::resolve_template_path(
+			is_singular( 'page' ),
+			$post_id,
+			$landing_enabled,
+			$landing_template,
+			file_exists( $landing_template ),
+			$template
+		);
 	}
 
 	/**

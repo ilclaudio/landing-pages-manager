@@ -1,0 +1,87 @@
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: KK Landing Pages Manager 0.0.1\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-05 10:13+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+"X-Domain: landing-pages-manager\n"
+"\n"
+"X-Generator: Loco https://localise.biz/"
+
+#: templates/landing-page.php:20
+msgid ""
+"Add custom HTML, CSS, and JavaScript in the Landing Page panel to start "
+"building this page."
+msgstr ""
+
+#: includes/core/class-kklpm-landing-page-module.php:103
+msgid "CSS"
+msgstr ""
+
+#: includes/core/class-kklpm-landing-page-module.php:88
+msgid ""
+"Custom HTML, CSS, and JavaScript fields are available only to users with the "
+"unfiltered_html capability."
+msgstr ""
+
+#: includes/core/class-kklpm-landing-page-module.php:123
+msgid ""
+"Disabling the landing page hides these fields in the editor, but keeps their "
+"saved content for later reuse."
+msgstr ""
+
+#: includes/core/class-kklpm-landing-page-module.php:80
+msgid "Enable Landing Page"
+msgstr ""
+
+#: includes/core/class-kklpm-landing-page-module.php:93
+msgid "HTML"
+msgstr ""
+
+#. URI of the plugin
+msgid "https://github.com/ilclaudio/landing-pages-manager"
+msgstr ""
+
+#. Author URI of the plugin
+msgid "https://www.claudiobattaglino.it"
+msgstr ""
+
+#. Author of the plugin
+msgid "IoClaudio"
+msgstr ""
+
+#: includes/core/class-kklpm-landing-page-module.php:113
+msgid "JavaScript"
+msgstr ""
+
+#. Name of the plugin
+msgid "KK Landing Pages Manager"
+msgstr ""
+
+#: includes/core/class-kklpm-landing-page-module.php:48
+msgid "Landing Page"
+msgstr ""
+
+#: templates/landing-page.php:19
+msgid "Landing page ready"
+msgstr ""
+
+#. Description of the plugin
+msgid ""
+"Manage landing pages with isolated templates, content grids, and domain "
+"routing."
+msgstr ""
+
+#: includes/core/class-kklpm-landing-page-module.php:84
+msgid ""
+"When enabled, this page uses the plugin landing page template instead of the "
+"active theme template."
+msgstr ""
