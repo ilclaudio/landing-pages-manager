@@ -99,6 +99,11 @@ function kklpm_manually_load_plugin() {
 	}
 
 	require $plugin_main_file;
+
+	// Mirror activation: the Domain Router table must exist for every test,
+	// not only for test classes that create it explicitly, since
+	// KKLPM_Domain_Router_Module queries it on every parse_request.
+	KKLPM_Domain_Map_Repository::create_table();
 }
 
 // Load the plugin before WordPress boots fully.

@@ -46,6 +46,8 @@ class KKLPM_Plugin {
 	 */
 	protected function register_modules() {
 		$this->modules[] = new KKLPM_Landing_Page_Module();
+		$this->modules[] = new KKLPM_Domain_Router_Module();
+		$this->modules[] = new KKLPM_Domain_Router_Admin_Page();
 	}
 
 	/**

@@ -152,6 +152,28 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Ensures saving the meta box persists the theme header/footer and wp_assets toggles.
+	 *
+	 * @return void
+	 */
+	public function test_save_meta_box_updates_theme_header_footer_and_wp_assets_toggles() {
+		$post = $this->create_page_for_administrator();
+
+		$_POST = $this->build_valid_post_payload(
+			array(
+				'kklpm_landing_enabled'             => '1',
+				'kklpm_landing_theme_header_footer' => '1',
+				'kklpm_landing_wp_assets'            => '1',
+			)
+		);
+
+		$this->module->save_meta_box( $post->ID, $post );
+
+		$this->assertSame( '1', get_post_meta( $post->ID, KKLPM_Landing_Page_Meta::THEME_HEADER_FOOTER, true ) );
+		$this->assertSame( '1', get_post_meta( $post->ID, KKLPM_Landing_Page_Meta::WP_ASSETS, true ) );
+	}
+
+	/**
 	 * Ensures raw content is preserved when the landing page gets disabled.
 	 *
 	 * @return void
@@ -349,6 +371,142 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'body { color: green; }', $markup );
 		$this->assertStringContainsString( 'console.log("hello");', $markup );
 		$this->assertStringNotContainsString( 'Landing page ready', $markup );
+	}
+
+	/**
+	 * Ensures the template calls get_header() and get_footer() when the toggle is enabled.
+	 *
+	 * @return void
+	 */
+	public function test_landing_page_template_calls_theme_header_and_footer_when_enabled() {
+		$post = $this->create_page_for_administrator();
+		update_post_meta( $post->ID, KKLPM_Landing_Page_Meta::THEME_HEADER_FOOTER, '1' );
+
+		$header_called = false;
+		$footer_called = false;
+
+		add_action(
+			'get_header',
+			function () use ( &$header_called ) {
+				$header_called = true;
+			}
+		);
+		add_action(
+			'get_footer',
+			function () use ( &$footer_called ) {
+				$footer_called = true;
+			}
+		);
+
+		$this->render_landing_template( $post );
+
+		add_action( 'wp_head', 'print_emoji_detection_script', 7 );
+
+		$this->assertTrue( $header_called );
+		$this->assertTrue( $footer_called );
+	}
+
+	/**
+	 * Ensures the template skips get_header() and get_footer() when the toggle is disabled.
+	 *
+	 * @return void
+	 */
+	public function test_landing_page_template_skips_theme_header_and_footer_when_disabled() {
+		$post = $this->create_page_for_administrator();
+		update_post_meta( $post->ID, KKLPM_Landing_Page_Meta::THEME_HEADER_FOOTER, '0' );
+
+		$header_called = false;
+		$footer_called = false;
+
+		add_action(
+			'get_header',
+			function () use ( &$header_called ) {
+				$header_called = true;
+			}
+		);
+		add_action(
+			'get_footer',
+			function () use ( &$footer_called ) {
+				$footer_called = true;
+			}
+		);
+
+		$this->render_landing_template( $post );
+
+		$this->assertFalse( $header_called );
+		$this->assertFalse( $footer_called );
+	}
+
+	/**
+	 * Ensures the template calls wp_head() and wp_footer() when the toggle is enabled.
+	 *
+	 * @return void
+	 */
+	public function test_landing_page_template_outputs_wp_head_and_wp_footer_when_enabled() {
+		$post = $this->create_page_for_administrator();
+		update_post_meta( $post->ID, KKLPM_Landing_Page_Meta::WP_ASSETS, '1' );
+
+		// The local WordPress test library ships an unbuilt `src/`, so the emoji
+		// script is not on disk; skip it here, it is unrelated to what this test verifies.
+		remove_action( 'wp_head', 'print_emoji_detection_script', 7 );
+
+		// Same reason: block-library CSS is not built in this checkout, so
+		// wp_maybe_inline_styles() triggers a doing_it_wrong() notice on read failure.
+		$this->setExpectedIncorrectUsage( 'wp_maybe_inline_styles' );
+
+		$head_called   = false;
+		$footer_called = false;
+
+		add_action(
+			'wp_head',
+			function () use ( &$head_called ) {
+				$head_called = true;
+			}
+		);
+		add_action(
+			'wp_footer',
+			function () use ( &$footer_called ) {
+				$footer_called = true;
+			}
+		);
+
+		$this->render_landing_template( $post );
+
+		add_action( 'wp_head', 'print_emoji_detection_script', 7 );
+
+		$this->assertTrue( $head_called );
+		$this->assertTrue( $footer_called );
+	}
+
+	/**
+	 * Ensures the template skips wp_head() and wp_footer() when the toggle is disabled.
+	 *
+	 * @return void
+	 */
+	public function test_landing_page_template_skips_wp_head_and_wp_footer_when_disabled() {
+		$post = $this->create_page_for_administrator();
+		update_post_meta( $post->ID, KKLPM_Landing_Page_Meta::WP_ASSETS, '0' );
+
+		$head_called   = false;
+		$footer_called = false;
+
+		add_action(
+			'wp_head',
+			function () use ( &$head_called ) {
+				$head_called = true;
+			}
+		);
+		add_action(
+			'wp_footer',
+			function () use ( &$footer_called ) {
+				$footer_called = true;
+			}
+		);
+
+		$this->render_landing_template( $post );
+
+		$this->assertFalse( $head_called );
+		$this->assertFalse( $footer_called );
 	}
 
 	/**

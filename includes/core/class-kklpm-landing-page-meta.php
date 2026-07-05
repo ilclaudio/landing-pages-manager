@@ -41,6 +41,20 @@ class KKLPM_Landing_Page_Meta {
 	const JS = '_kklpm_landing_js';
 
 	/**
+	 * Theme header/footer toggle meta key.
+	 *
+	 * @var string
+	 */
+	const THEME_HEADER_FOOTER = '_kklpm_landing_theme_header_footer';
+
+	/**
+	 * WordPress head/footer assets toggle meta key.
+	 *
+	 * @var string
+	 */
+	const WP_ASSETS = '_kklpm_landing_wp_assets';
+
+	/**
 	 * Whether the landing page is enabled for a post.
 	 *
 	 * @param int $post_id Post ID.
@@ -48,6 +62,26 @@ class KKLPM_Landing_Page_Meta {
 	 */
 	public static function is_enabled( $post_id ) {
 		return '1' === get_post_meta( $post_id, self::ENABLED, true );
+	}
+
+	/**
+	 * Whether the theme header/footer should wrap the landing page.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return bool
+	 */
+	public static function is_theme_header_footer_enabled( $post_id ) {
+		return '1' === get_post_meta( $post_id, self::THEME_HEADER_FOOTER, true );
+	}
+
+	/**
+	 * Whether WordPress head/footer assets should load on the landing page.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return bool
+	 */
+	public static function is_wp_assets_enabled( $post_id ) {
+		return '1' === get_post_meta( $post_id, self::WP_ASSETS, true );
 	}
 
 	/**

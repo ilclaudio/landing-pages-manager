@@ -28,6 +28,8 @@ require_once KKLPM_PLUGIN_DIR . 'includes/core/class-kklpm-landing-page-module.p
 require_once KKLPM_PLUGIN_DIR . 'includes/core/class-kklpm-plugin.php';
 require_once KKLPM_PLUGIN_DIR . 'includes/domain-router/class-kklpm-domain-map-repository.php';
 require_once KKLPM_PLUGIN_DIR . 'includes/domain-router/class-kklpm-domain-router-matcher.php';
+require_once KKLPM_PLUGIN_DIR . 'includes/domain-router/class-kklpm-domain-router-module.php';
+require_once KKLPM_PLUGIN_DIR . 'includes/domain-router/class-kklpm-domain-router-admin-page.php';
 
 register_activation_hook( __FILE__, array( 'KKLPM_Plugin', 'activate' ) );
 

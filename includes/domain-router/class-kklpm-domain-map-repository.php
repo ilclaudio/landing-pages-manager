@@ -13,6 +13,22 @@ defined( 'ABSPATH' ) || exit;
 class KKLPM_Domain_Map_Repository {
 
 	/**
+	 * Supported mapping types for Step 2 exact-match routing.
+	 *
+	 * @var string[]
+	 */
+	const ALLOWED_TYPES = array( 'subdomain', 'subpath', 'external' );
+
+	/**
+	 * Get all supported mapping types.
+	 *
+	 * @return string[]
+	 */
+	public static function get_allowed_types() {
+		return self::ALLOWED_TYPES;
+	}
+
+	/**
 	 * Get the custom table name.
 	 *
 	 * @return string
@@ -78,6 +94,11 @@ class KKLPM_Domain_Map_Repository {
 		global $wpdb;
 
 		$prepared = self::prepare_mapping_data( $data );
+
+		if ( empty( $prepared ) ) {
+			return false;
+		}
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Intentional repository write for plugin-owned table.
 		$result = $wpdb->insert(
 			self::get_table_name(),
@@ -99,6 +120,11 @@ class KKLPM_Domain_Map_Repository {
 		global $wpdb;
 
 		$prepared = self::prepare_mapping_data( $data );
+
+		if ( empty( $prepared ) ) {
+			return false;
+		}
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Intentional repository write for plugin-owned table.
 		$result = $wpdb->update(
 			self::get_table_name(),
@@ -153,6 +179,24 @@ class KKLPM_Domain_Map_Repository {
 	}
 
 	/**
+	 * Get all mappings, including inactive ones.
+	 *
+	 * @return array
+	 */
+	public static function get_all_mappings() {
+		global $wpdb;
+		$table_name = self::get_table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Intentional repository read for plugin-owned table name.
+		$rows = $wpdb->get_results(
+			"SELECT * FROM {$table_name} ORDER BY id ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Plugin-owned table name.
+			ARRAY_A
+		);
+
+		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
 	 * Get all active mappings.
 	 *
 	 * @return array
@@ -202,17 +246,38 @@ class KKLPM_Domain_Map_Repository {
 	 */
 	protected static function prepare_mapping_data( array $data ) {
 		$type = isset( $data['type'] ) ? sanitize_key( $data['type'] ) : '';
-		$lang = isset( $data['lang'] ) ? sanitize_text_field( (string) $data['lang'] ) : '';
+
+		if ( ! self::is_allowed_type( $type ) ) {
+			return array();
+		}
+
+		$lang    = isset( $data['lang'] ) ? sanitize_text_field( (string) $data['lang'] ) : '';
+		$value   = KKLPM_Domain_Router_Matcher::normalize_mapping_value(
+			$type,
+			isset( $data['value'] ) ? (string) $data['value'] : ''
+		);
+		$page_id = isset( $data['page_id'] ) ? (int) $data['page_id'] : 0;
+
+		if ( '' === $value || 0 >= $page_id ) {
+			return array();
+		}
 
 		return array(
 			'type'    => $type,
-			'value'   => KKLPM_Domain_Router_Matcher::normalize_mapping_value(
-				$type,
-				isset( $data['value'] ) ? (string) $data['value'] : ''
-			),
-			'page_id' => isset( $data['page_id'] ) ? (int) $data['page_id'] : 0,
+			'value'   => $value,
+			'page_id' => $page_id,
 			'active'  => empty( $data['active'] ) ? 0 : 1,
 			'lang'    => '' === $lang ? null : $lang,
 		);
+	}
+
+	/**
+	 * Whether a mapping type is supported by the repository.
+	 *
+	 * @param string $type Mapping type.
+	 * @return bool
+	 */
+	protected static function is_allowed_type( $type ) {
+		return in_array( $type, self::ALLOWED_TYPES, true );
 	}
 }

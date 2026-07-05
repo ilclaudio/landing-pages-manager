@@ -22,5 +22,7 @@ class KKLPM_Landing_Page_Meta_Test extends TestCase {
 		$this->assertSame( '_kklpm_landing_html', KKLPM_Landing_Page_Meta::HTML );
 		$this->assertSame( '_kklpm_landing_css', KKLPM_Landing_Page_Meta::CSS );
 		$this->assertSame( '_kklpm_landing_js', KKLPM_Landing_Page_Meta::JS );
+		$this->assertSame( '_kklpm_landing_theme_header_footer', KKLPM_Landing_Page_Meta::THEME_HEADER_FOOTER );
+		$this->assertSame( '_kklpm_landing_wp_assets', KKLPM_Landing_Page_Meta::WP_ASSETS );
 	}
 }

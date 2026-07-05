@@ -24,6 +24,8 @@ class KKLPMPluginBootstrapTest extends WP_UnitTestCase {
 		$this->assertTrue( class_exists( 'KKLPM_Path_Utils' ) );
 		$this->assertTrue( class_exists( 'KKLPM_Plugin' ) );
 		$this->assertTrue( class_exists( 'KKLPM_Landing_Page_Module' ) );
+		$this->assertTrue( class_exists( 'KKLPM_Domain_Router_Module' ) );
+		$this->assertTrue( class_exists( 'KKLPM_Domain_Router_Admin_Page' ) );
 		$this->assertSame( '/landing', KKLPM_Path_Utils::normalize_route_path( 'landing/' ) );
 		$this->assertSame( '_kklpm_landing_enabled', KKLPM_Landing_Page_Meta::ENABLED );
 	}
@@ -38,6 +40,11 @@ class KKLPMPluginBootstrapTest extends WP_UnitTestCase {
 		$this->assertTrue( $this->hook_has_callback( 'add_meta_boxes', 'KKLPM_Landing_Page_Module', 'register_meta_box' ) );
 		$this->assertTrue( $this->hook_has_callback( 'save_post_page', 'KKLPM_Landing_Page_Module', 'save_meta_box' ) );
 		$this->assertTrue( $this->hook_has_callback( 'template_include', 'KKLPM_Landing_Page_Module', 'filter_template_include' ) );
+		$this->assertTrue( $this->hook_has_callback( 'parse_request', 'KKLPM_Domain_Router_Module', 'handle_parse_request' ) );
+		$this->assertTrue( $this->hook_has_callback( 'admin_menu', 'KKLPM_Domain_Router_Admin_Page', 'register_menu' ) );
+		$this->assertTrue( $this->hook_has_callback( 'admin_post_kklpm_domain_router_save_mapping', 'KKLPM_Domain_Router_Admin_Page', 'handle_save_action' ) );
+		$this->assertTrue( $this->hook_has_callback( 'admin_post_kklpm_domain_router_delete_mapping', 'KKLPM_Domain_Router_Admin_Page', 'handle_delete_action' ) );
+		$this->assertTrue( $this->hook_has_callback( 'admin_post_kklpm_domain_router_toggle_mapping', 'KKLPM_Domain_Router_Admin_Page', 'handle_toggle_action' ) );
 	}
 
 	/**
