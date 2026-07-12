@@ -52,6 +52,33 @@ class KKLPM_Domain_Router_Matcher {
 	}
 
 	/**
+	 * Validates a raw mapping value before it is persisted.
+	 *
+	 * @param string $type  Mapping type.
+	 * @param string $value Raw mapping value.
+	 * @return string|null Error code (`empty`, `scheme`, `host_format`), or null when valid.
+	 */
+	public static function validate_mapping_value( $type, $value ) {
+		$value = trim( (string) $value );
+
+		if ( '' === $value ) {
+			return 'empty';
+		}
+
+		if ( false !== strpos( $value, '://' ) ) {
+			return 'scheme';
+		}
+
+		if ( 'subdomain' === $type || 'external' === $type ) {
+			if ( ! preg_match( '/^[a-z0-9.-]+$/i', $value ) ) {
+				return 'host_format';
+			}
+		}
+
+		return null;
+	}
+
+	/**
 	 * Find the first matching active mapping for a request.
 	 *
 	 * @param string $host     Request host.

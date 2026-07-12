@@ -118,9 +118,10 @@ class KKLPM_Domain_Router_Admin_Page {
 									class="regular-text"
 									name="mapping[value]"
 									id="kklpm-domain-value"
+									placeholder="promo.example.com"
 									value="<?php echo esc_attr( $edit_mapping ? $edit_mapping['value'] : '' ); ?>"
 								/>
-								<p class="description"><?php esc_html_e( 'Use a host for subdomain/external mappings or a path for subpath mappings.', 'landing-pages-manager' ); ?></p>
+								<p class="description" id="kklpm-domain-value-hint"><?php esc_html_e( 'Full hostname only, no http:// or https:// prefix and no path (e.g. promo.example.com) for subdomain/external mappings, or a path starting with / and no host (e.g. /promo) for subpath mappings.', 'landing-pages-manager' ); ?></p>
 							</td>
 						</tr>
 						<tr>
@@ -172,6 +173,46 @@ class KKLPM_Domain_Router_Admin_Page {
 				</table>
 				<?php submit_button( $edit_mapping ? __( 'Update Mapping', 'landing-pages-manager' ) : __( 'Add Mapping', 'landing-pages-manager' ) ); ?>
 			</form>
+			<script>
+				( function() {
+					var typeField  = document.getElementById( 'kklpm-domain-type' );
+					var valueField = document.getElementById( 'kklpm-domain-value' );
+					var hintField  = document.getElementById( 'kklpm-domain-value-hint' );
+
+					if ( ! typeField || ! valueField || ! hintField ) {
+						return;
+					}
+
+					var hints = {
+						subdomain: {
+							placeholder: 'promo.example.com',
+							hint: <?php echo wp_json_encode( __( 'Full hostname only — no http:// or https:// prefix, no path.', 'landing-pages-manager' ) ); ?>
+						},
+						external: {
+							placeholder: 'www.example.org',
+							hint: <?php echo wp_json_encode( __( 'Full external hostname only — no http:// or https:// prefix, no path.', 'landing-pages-manager' ) ); ?>
+						},
+						subpath: {
+							placeholder: '/promo',
+							hint: <?php echo wp_json_encode( __( 'Path starting with / — no http:// or https:// prefix, no host.', 'landing-pages-manager' ) ); ?>
+						}
+					};
+
+					function syncValueHint() {
+						var config = hints[ typeField.value ];
+
+						if ( ! config ) {
+							return;
+						}
+
+						valueField.placeholder = config.placeholder;
+						hintField.textContent = config.hint;
+					}
+
+					typeField.addEventListener( 'change', syncValueHint );
+					syncValueHint();
+				}() );
+			</script>
 
 			<h2><?php esc_html_e( 'Existing Mappings', 'landing-pages-manager' ); ?></h2>
 			<?php if ( empty( $mappings ) ) : ?>
@@ -230,7 +271,15 @@ class KKLPM_Domain_Router_Admin_Page {
 		$mapping_id = isset( $_POST['mapping_id'] ) ? absint( wp_unslash( $_POST['mapping_id'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified above.
 		$raw_input  = isset( $_POST['mapping'] ) && is_array( $_POST['mapping'] ) ? (array) wp_unslash( $_POST['mapping'] ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Missing,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified above; field sanitization happens immediately in sanitize_mapping_input().
 		$data       = $this->sanitize_mapping_input( $raw_input );
-		$success    = $mapping_id > 0
+
+		$validation_error = KKLPM_Domain_Router_Matcher::validate_mapping_value( $data['type'], $data['value'] );
+
+		if ( null !== $validation_error ) {
+			$this->redirect_with_notice( 'invalid_' . $validation_error );
+			return;
+		}
+
+		$success = $mapping_id > 0
 			? KKLPM_Domain_Map_Repository::update_mapping( $mapping_id, $data )
 			: KKLPM_Domain_Map_Repository::insert_mapping( $data );
 
@@ -311,18 +360,21 @@ class KKLPM_Domain_Router_Admin_Page {
 		}
 
 		$messages = array(
-			'created' => __( 'Mapping created.', 'landing-pages-manager' ),
-			'updated' => __( 'Mapping updated.', 'landing-pages-manager' ),
-			'toggled' => __( 'Mapping status updated.', 'landing-pages-manager' ),
-			'deleted' => __( 'Mapping deleted.', 'landing-pages-manager' ),
-			'invalid' => __( 'Unable to save the mapping. Check the submitted values.', 'landing-pages-manager' ),
+			'created'             => __( 'Mapping created.', 'landing-pages-manager' ),
+			'updated'             => __( 'Mapping updated.', 'landing-pages-manager' ),
+			'toggled'             => __( 'Mapping status updated.', 'landing-pages-manager' ),
+			'deleted'             => __( 'Mapping deleted.', 'landing-pages-manager' ),
+			'invalid'             => __( 'Unable to save the mapping. Check the submitted values.', 'landing-pages-manager' ),
+			'invalid_empty'       => __( 'The Value field cannot be empty.', 'landing-pages-manager' ),
+			'invalid_scheme'      => __( 'Value must not include a URL scheme (http:// or https://). Enter just the host (e.g. promo.example.com) or the path (e.g. /promo).', 'landing-pages-manager' ),
+			'invalid_host_format' => __( 'Value contains characters that are not valid in a hostname.', 'landing-pages-manager' ),
 		);
 
 		if ( ! isset( $messages[ $notice ] ) ) {
 			return;
 		}
 
-		$notice_class = 'invalid' === $notice ? 'notice notice-error' : 'notice notice-success';
+		$notice_class = 0 === strpos( $notice, 'invalid' ) ? 'notice notice-error' : 'notice notice-success';
 		?>
 		<div class="<?php echo esc_attr( $notice_class ); ?>"><p><?php echo esc_html( $messages[ $notice ] ); ?></p></div>
 		<?php

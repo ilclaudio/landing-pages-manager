@@ -140,6 +140,35 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Ensures a scheme-prefixed Value is rejected instead of silently persisted.
+	 *
+	 * @return void
+	 */
+	public function test_handle_save_action_rejects_scheme_prefixed_value() {
+		$page_id = $this->create_published_page( 'admin-scheme-rejected' );
+
+		$_POST = array(
+			'action'                                      => 'kklpm_domain_router_save_mapping',
+			'mapping_id'                                  => '0',
+			KKLPM_Domain_Router_Admin_Page::SAVE_NONCE_NAME => wp_create_nonce( KKLPM_Domain_Router_Admin_Page::SAVE_NONCE_ACTION ),
+			'mapping'                                     => array(
+				'type'    => 'subdomain',
+				'value'   => 'http://promo.example.com',
+				'page_id' => (string) $page_id,
+				'active'  => '1',
+				'lang'    => '',
+			),
+		);
+
+		// admin-post.php handlers normally exit() after wp_safe_redirect(); headers
+		// are already sent in the test environment, so redirect_with_notice() just
+		// returns instead, letting execution reach this assertion.
+		$this->admin_page->handle_save_action();
+
+		$this->assertCount( 0, KKLPM_Domain_Map_Repository::get_all_mappings() );
+	}
+
+	/**
 	 * Ensures update action overwrites an existing mapping safely.
 	 *
 	 * @return void

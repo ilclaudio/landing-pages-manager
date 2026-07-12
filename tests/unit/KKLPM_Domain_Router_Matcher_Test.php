@@ -44,6 +44,48 @@ class KKLPM_Domain_Router_Matcher_Test extends TestCase {
 	}
 
 	/**
+	 * Ensure empty values are rejected regardless of type.
+	 *
+	 * @return void
+	 */
+	public function test_validate_mapping_value_rejects_empty_value() {
+		$this->assertSame( 'empty', KKLPM_Domain_Router_Matcher::validate_mapping_value( 'subdomain', '' ) );
+		$this->assertSame( 'empty', KKLPM_Domain_Router_Matcher::validate_mapping_value( 'subpath', '   ' ) );
+	}
+
+	/**
+	 * Ensure a URL scheme is rejected for every mapping type.
+	 *
+	 * @return void
+	 */
+	public function test_validate_mapping_value_rejects_scheme_prefix() {
+		$this->assertSame( 'scheme', KKLPM_Domain_Router_Matcher::validate_mapping_value( 'subdomain', 'http://promo.example.com' ) );
+		$this->assertSame( 'scheme', KKLPM_Domain_Router_Matcher::validate_mapping_value( 'external', 'https://www.example.org' ) );
+		$this->assertSame( 'scheme', KKLPM_Domain_Router_Matcher::validate_mapping_value( 'subpath', 'http://example.com/promo' ) );
+	}
+
+	/**
+	 * Ensure invalid hostname characters are rejected for subdomain/external mappings.
+	 *
+	 * @return void
+	 */
+	public function test_validate_mapping_value_rejects_invalid_host_characters() {
+		$this->assertSame( 'host_format', KKLPM_Domain_Router_Matcher::validate_mapping_value( 'subdomain', 'promo example.com' ) );
+		$this->assertSame( 'host_format', KKLPM_Domain_Router_Matcher::validate_mapping_value( 'external', 'www.example.org/path' ) );
+	}
+
+	/**
+	 * Ensure valid values pass validation for every mapping type.
+	 *
+	 * @return void
+	 */
+	public function test_validate_mapping_value_accepts_valid_values() {
+		$this->assertNull( KKLPM_Domain_Router_Matcher::validate_mapping_value( 'subdomain', 'promo.example.com' ) );
+		$this->assertNull( KKLPM_Domain_Router_Matcher::validate_mapping_value( 'external', 'www.example.org' ) );
+		$this->assertNull( KKLPM_Domain_Router_Matcher::validate_mapping_value( 'subpath', '/promo' ) );
+	}
+
+	/**
 	 * Ensure the matcher finds host-based mappings before returning null.
 	 *
 	 * @return void
