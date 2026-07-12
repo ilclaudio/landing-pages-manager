@@ -25,7 +25,7 @@ $html_content = KKLPM_Landing_Page_View::resolve_html_content(
 );
 
 if ( $show_theme_header_footer ) :
-	get_header();
+	KKLPM_Landing_Page_View::render_theme_header();
 else :
 	?><!DOCTYPE html>
 	<html <?php language_attributes(); ?>>
@@ -40,6 +40,9 @@ else :
 	<?php
 endif;
 ?>
+<?php if ( $show_theme_header_footer ) : ?>
+	<main class="kklpm-landing-content">
+<?php endif; ?>
 <?php if ( '' !== trim( $css_content ) ) : ?>
 	<style>
 		<?php echo $css_content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Raw CSS is intentionally stored for users with unfiltered_html. ?>
@@ -69,9 +72,12 @@ endif;
 		<?php echo $js_content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Raw JavaScript is intentionally stored for users with unfiltered_html. ?>
 	</script>
 <?php endif; ?>
+<?php if ( $show_theme_header_footer ) : ?>
+	</main>
+<?php endif; ?>
 <?php
 if ( $show_theme_header_footer ) :
-	get_footer();
+	KKLPM_Landing_Page_View::render_theme_footer();
 else :
 	if ( $load_wp_assets ) {
 		wp_footer();

@@ -24,7 +24,7 @@ class KKLPM_Domain_Router_Admin_Page {
 	 *
 	 * @var string
 	 */
-	const CAPABILITY = 'manage_options';
+	const CAPABILITY = 'kklpm_manage_domain_router';
 
 	/**
 	 * Save action nonce name.
@@ -199,7 +199,7 @@ class KKLPM_Domain_Router_Admin_Page {
 								<td><?php echo esc_html( (string) $mapping['lang'] ); ?></td>
 								<td><?php echo ! empty( $mapping['active'] ) ? esc_html__( 'Active', 'landing-pages-manager' ) : esc_html__( 'Inactive', 'landing-pages-manager' ); ?></td>
 								<td>
-									<a href="<?php echo esc_url( $this->get_page_url( array( 'edit' => (int) $mapping['id'] ) ) ); ?>"><?php esc_html_e( 'Edit', 'landing-pages-manager' ); ?></a>
+									<a href="<?php echo esc_url( self::get_page_url( array( 'edit' => (int) $mapping['id'] ) ) ); ?>"><?php esc_html_e( 'Edit', 'landing-pages-manager' ); ?></a>
 									|
 									<a href="<?php echo esc_url( $this->get_row_action_url( 'kklpm_domain_router_toggle_mapping', (int) $mapping['id'] ) ); ?>">
 										<?php echo ! empty( $mapping['active'] ) ? esc_html__( 'Disable', 'landing-pages-manager' ) : esc_html__( 'Enable', 'landing-pages-manager' ); ?>
@@ -392,7 +392,7 @@ class KKLPM_Domain_Router_Admin_Page {
 	 * @return void
 	 */
 	protected function redirect_with_notice( $notice ) {
-		$redirect_url = $this->get_page_url(
+		$redirect_url = self::get_page_url(
 			array(
 				'kklpm_notice' => sanitize_key( $notice ),
 			)
@@ -413,7 +413,7 @@ class KKLPM_Domain_Router_Admin_Page {
 	 * @param array $args Optional query arguments.
 	 * @return string
 	 */
-	protected function get_page_url( array $args = array() ) {
+	public static function get_page_url( array $args = array() ) {
 		return add_query_arg(
 			array_merge(
 				array(

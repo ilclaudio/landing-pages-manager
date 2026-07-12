@@ -37,6 +37,7 @@ class KKLPMPluginBootstrapTest extends WP_UnitTestCase {
 	 */
 	public function test_plugin_registers_expected_core_hooks() {
 		$this->assertTrue( $this->hook_has_callback( 'init', 'KKLPM_Plugin', 'load_textdomain' ) );
+		$this->assertTrue( $this->hook_has_callback( 'admin_init', 'KKLPM_Plugin', 'grant_default_capabilities' ) );
 		$this->assertTrue( $this->hook_has_callback( 'add_meta_boxes', 'KKLPM_Landing_Page_Module', 'register_meta_box' ) );
 		$this->assertTrue( $this->hook_has_callback( 'save_post_page', 'KKLPM_Landing_Page_Module', 'save_meta_box' ) );
 		$this->assertTrue( $this->hook_has_callback( 'template_include', 'KKLPM_Landing_Page_Module', 'filter_template_include' ) );
@@ -45,6 +46,28 @@ class KKLPMPluginBootstrapTest extends WP_UnitTestCase {
 		$this->assertTrue( $this->hook_has_callback( 'admin_post_kklpm_domain_router_save_mapping', 'KKLPM_Domain_Router_Admin_Page', 'handle_save_action' ) );
 		$this->assertTrue( $this->hook_has_callback( 'admin_post_kklpm_domain_router_delete_mapping', 'KKLPM_Domain_Router_Admin_Page', 'handle_delete_action' ) );
 		$this->assertTrue( $this->hook_has_callback( 'admin_post_kklpm_domain_router_toggle_mapping', 'KKLPM_Domain_Router_Admin_Page', 'handle_toggle_action' ) );
+	}
+
+	/**
+	 * Ensures the default capabilities are granted to the expected core roles only.
+	 *
+	 * @return void
+	 */
+	public function test_grant_default_capabilities_assigns_expected_roles() {
+		( new KKLPM_Plugin() )->grant_default_capabilities();
+
+		$administrator = get_role( 'administrator' );
+		$editor        = get_role( 'editor' );
+		$subscriber    = get_role( 'subscriber' );
+
+		$this->assertTrue( $administrator->has_cap( 'kklpm_manage_landing_pages' ) );
+		$this->assertTrue( $administrator->has_cap( 'kklpm_manage_domain_router' ) );
+
+		$this->assertTrue( $editor->has_cap( 'kklpm_manage_landing_pages' ) );
+		$this->assertFalse( $editor->has_cap( 'kklpm_manage_domain_router' ) );
+
+		$this->assertFalse( $subscriber->has_cap( 'kklpm_manage_landing_pages' ) );
+		$this->assertFalse( $subscriber->has_cap( 'kklpm_manage_domain_router' ) );
 	}
 
 	/**

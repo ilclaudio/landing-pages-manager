@@ -83,6 +83,63 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Ensures a user without kklpm_manage_domain_router is denied the settings page.
+	 *
+	 * Editors get kklpm_manage_landing_pages by default but must not get
+	 * kklpm_manage_domain_router, so this also verifies the two capabilities
+	 * stay independent.
+	 *
+	 * @return void
+	 */
+	public function test_render_page_rejects_user_without_domain_router_capability() {
+		wp_set_current_user(
+			self::factory()->user->create(
+				array(
+					'role' => 'editor',
+				)
+			)
+		);
+
+		$this->expectException( WPDieException::class );
+
+		$this->admin_page->render_page();
+	}
+
+	/**
+	 * Ensures a user without kklpm_manage_domain_router cannot submit mapping changes.
+	 *
+	 * @return void
+	 */
+	public function test_handle_save_action_rejects_user_without_domain_router_capability() {
+		$page_id = $this->create_published_page( 'admin-blocked' );
+
+		wp_set_current_user(
+			self::factory()->user->create(
+				array(
+					'role' => 'editor',
+				)
+			)
+		);
+
+		$_POST = array(
+			'action'                                      => 'kklpm_domain_router_save_mapping',
+			'mapping_id'                                  => '0',
+			KKLPM_Domain_Router_Admin_Page::SAVE_NONCE_NAME => wp_create_nonce( KKLPM_Domain_Router_Admin_Page::SAVE_NONCE_ACTION ),
+			'mapping'                                     => array(
+				'type'    => 'subpath',
+				'value'   => 'blocked',
+				'page_id' => (string) $page_id,
+				'active'  => '1',
+				'lang'    => '',
+			),
+		);
+
+		$this->expectException( WPDieException::class );
+
+		$this->admin_page->handle_save_action();
+	}
+
+	/**
 	 * Ensures update action overwrites an existing mapping safely.
 	 *
 	 * @return void

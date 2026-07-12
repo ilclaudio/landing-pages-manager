@@ -104,6 +104,10 @@ function kklpm_manually_load_plugin() {
 	// not only for test classes that create it explicitly, since
 	// KKLPM_Domain_Router_Module queries it on every parse_request.
 	KKLPM_Domain_Map_Repository::create_table();
+
+	// Mirror activation: default capabilities must be granted for every test,
+	// since register_activation_hook never fires in this bootstrap.
+	( new KKLPM_Plugin() )->grant_default_capabilities();
 }
 
 // Load the plugin before WordPress boots fully.

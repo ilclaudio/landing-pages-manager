@@ -42,5 +42,14 @@
 		</properties>
 	</rule>
 
+	<rule ref="WordPress.WP.Capabilities">
+		<properties>
+			<property name="custom_capabilities" type="array">
+				<element value="kklpm_manage_landing_pages"/>
+				<element value="kklpm_manage_domain_router"/>
+			</property>
+		</properties>
+	</rule>
+
 	<config name="minimum_supported_wp_version" value="6.0"/>
 </ruleset>

@@ -43,6 +43,10 @@ class KKLPM_Landing_Page_Module {
 	 * @return void
 	 */
 	public function register_meta_box() {
+		if ( ! current_user_can( 'kklpm_manage_landing_pages' ) ) {
+			return;
+		}
+
 		add_meta_box(
 			'kklpm-landing-page-settings',
 			__( 'Landing Page', 'landing-pages-manager' ),
@@ -63,6 +67,7 @@ class KKLPM_Landing_Page_Module {
 		$enabled             = KKLPM_Landing_Page_Meta::is_enabled( $post->ID );
 		$theme_header_footer = KKLPM_Landing_Page_Meta::is_theme_header_footer_enabled( $post->ID );
 		$wp_assets           = KKLPM_Landing_Page_Meta::is_wp_assets_enabled( $post->ID );
+		$wp_assets_disabled  = $theme_header_footer;
 		$html_content        = KKLPM_Landing_Page_Meta::get_content( $post->ID, KKLPM_Landing_Page_Meta::HTML );
 		$css_content         = KKLPM_Landing_Page_Meta::get_content( $post->ID, KKLPM_Landing_Page_Meta::CSS );
 		$js_content          = KKLPM_Landing_Page_Meta::get_content( $post->ID, KKLPM_Landing_Page_Meta::JS );
@@ -104,7 +109,7 @@ class KKLPM_Landing_Page_Module {
 				</label>
 			</p>
 			<p class="description">
-				<?php esc_html_e( 'When enabled, the template calls the active theme\'s get_header() and get_footer() instead of using the isolated shell. Classic themes only.', 'landing-pages-manager' ); ?>
+				<?php esc_html_e( 'When enabled, the template uses the active theme header and footer instead of the isolated shell. Supports classic themes and block themes.', 'landing-pages-manager' ); ?>
 			</p>
 			<p>
 				<label for="kklpm-landing-wp-assets">
@@ -114,12 +119,13 @@ class KKLPM_Landing_Page_Module {
 						id="kklpm-landing-wp-assets"
 						value="1"
 						<?php checked( $wp_assets ); ?>
+						<?php disabled( $wp_assets_disabled ); ?>
 					/>
 					<?php esc_html_e( 'Load WordPress CSS/JS (wp_head/wp_footer)', 'landing-pages-manager' ); ?>
 				</label>
 			</p>
 			<p class="description">
-				<?php esc_html_e( 'When enabled, the template calls wp_head() and wp_footer() so other plugins and the theme can enqueue assets. Useful for debugging or compatibility.', 'landing-pages-manager' ); ?>
+				<?php esc_html_e( 'Used only with the isolated landing template. When "Show theme header/footer" is enabled, this option has no effect because the page is rendered through the active theme structure instead.', 'landing-pages-manager' ); ?>
 			</p>
 			<p>
 				<label for="kklpm-landing-html"><strong><?php esc_html_e( 'HTML', 'landing-pages-manager' ); ?></strong></label>
@@ -154,13 +160,22 @@ class KKLPM_Landing_Page_Module {
 			<p class="description">
 				<?php esc_html_e( 'Disabling the landing page hides these fields in the editor, but keeps their saved content for later reuse.', 'landing-pages-manager' ); ?>
 			</p>
+			<?php if ( current_user_can( KKLPM_Domain_Router_Admin_Page::CAPABILITY ) ) : ?>
+				<p>
+					<a href="<?php echo esc_url( KKLPM_Domain_Router_Admin_Page::get_page_url() ); ?>">
+						<?php esc_html_e( 'Manage routes', 'landing-pages-manager' ); ?>
+					</a>
+				</p>
+			<?php endif; ?>
 		</div>
 		<script>
 			( function() {
 				var toggle = document.getElementById( 'kklpm-landing-enabled' );
 				var fields = document.getElementById( 'kklpm-landing-fields' );
+				var themeHeaderFooterToggle = document.getElementById( 'kklpm-landing-theme-header-footer' );
+				var wpAssetsToggle = document.getElementById( 'kklpm-landing-wp-assets' );
 
-				if ( ! toggle || ! fields ) {
+				if ( ! toggle || ! fields || ! themeHeaderFooterToggle || ! wpAssetsToggle ) {
 					return;
 				}
 
@@ -168,8 +183,14 @@ class KKLPM_Landing_Page_Module {
 					fields.hidden = ! toggle.checked;
 				}
 
+				function syncWpAssetsAvailability() {
+					wpAssetsToggle.disabled = themeHeaderFooterToggle.checked;
+				}
+
 				toggle.addEventListener( 'change', syncLandingFieldsVisibility );
+				themeHeaderFooterToggle.addEventListener( 'change', syncWpAssetsAvailability );
 				syncLandingFieldsVisibility();
+				syncWpAssetsAvailability();
 			}() );
 		</script>
 		<?php
@@ -199,10 +220,15 @@ class KKLPM_Landing_Page_Module {
 		);
 		update_post_meta( $post_id, KKLPM_Landing_Page_Meta::THEME_HEADER_FOOTER, $theme_header_footer );
 
-		$wp_assets_input = isset( $_POST['kklpm_landing_wp_assets'] ) ? sanitize_text_field( wp_unslash( $_POST['kklpm_landing_wp_assets'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce is verified in can_save_meta_box().
-		$wp_assets       = KKLPM_Landing_Page_View::normalize_enabled_value(
-			$wp_assets_input
-		);
+		$wp_assets = get_post_meta( $post_id, KKLPM_Landing_Page_Meta::WP_ASSETS, true );
+
+		if ( '1' !== $theme_header_footer || isset( $_POST['kklpm_landing_wp_assets'] ) ) {
+			$wp_assets_input = isset( $_POST['kklpm_landing_wp_assets'] ) ? sanitize_text_field( wp_unslash( $_POST['kklpm_landing_wp_assets'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce is verified in can_save_meta_box().
+			$wp_assets       = KKLPM_Landing_Page_View::normalize_enabled_value(
+				$wp_assets_input
+			);
+		}
+
 		update_post_meta( $post_id, KKLPM_Landing_Page_Meta::WP_ASSETS, $wp_assets );
 
 		if ( ! current_user_can( 'unfiltered_html' ) ) {
@@ -265,7 +291,7 @@ class KKLPM_Landing_Page_Module {
 			return false;
 		}
 
-		return current_user_can( 'edit_post', $post_id );
+		return current_user_can( 'edit_post', $post_id ) && current_user_can( 'kklpm_manage_landing_pages' );
 	}
 
 	/**

@@ -25,7 +25,14 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 	protected static $limited_editor_user_id = 0;
 
 	/**
-	 * Creates the custom role required by the suite.
+	 * Test user with page editing capabilities but without kklpm_manage_landing_pages.
+	 *
+	 * @var int
+	 */
+	protected static $no_landing_access_user_id = 0;
+
+	/**
+	 * Creates the custom roles required by the suite.
 	 *
 	 * @return void
 	 */
@@ -36,10 +43,11 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 			'kklpm_limited_editor',
 			'KKLPM Limited Editor',
 			array(
-				'read'                 => true,
-				'edit_pages'           => true,
-				'edit_published_pages' => true,
-				'publish_pages'        => true,
+				'read'                       => true,
+				'edit_pages'                 => true,
+				'edit_published_pages'       => true,
+				'publish_pages'              => true,
+				'kklpm_manage_landing_pages' => true,
 			)
 		);
 
@@ -48,15 +56,33 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 				'role' => 'kklpm_limited_editor',
 			)
 		);
+
+		add_role(
+			'kklpm_no_landing_access',
+			'KKLPM No Landing Access',
+			array(
+				'read'                 => true,
+				'edit_pages'           => true,
+				'edit_published_pages' => true,
+				'publish_pages'        => true,
+			)
+		);
+
+		self::$no_landing_access_user_id = self::factory()->user->create(
+			array(
+				'role' => 'kklpm_no_landing_access',
+			)
+		);
 	}
 
 	/**
-	 * Removes the custom role after the suite finishes.
+	 * Removes the custom roles after the suite finishes.
 	 *
 	 * @return void
 	 */
 	public static function wpTearDownAfterClass() {
 		remove_role( 'kklpm_limited_editor' );
+		remove_role( 'kklpm_no_landing_access' );
 	}
 
 	/**
@@ -77,6 +103,8 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function tear_down() {
+		remove_all_filters( 'kklpm_is_block_theme' );
+		remove_all_filters( 'pre_get_block_template' );
 		$_POST = array();
 		wp_set_current_user( 0 );
 		parent::tear_down();
@@ -164,6 +192,29 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 				'kklpm_landing_enabled'             => '1',
 				'kklpm_landing_theme_header_footer' => '1',
 				'kklpm_landing_wp_assets'            => '1',
+			)
+		);
+
+		$this->module->save_meta_box( $post->ID, $post );
+
+		$this->assertSame( '1', get_post_meta( $post->ID, KKLPM_Landing_Page_Meta::THEME_HEADER_FOOTER, true ) );
+		$this->assertSame( '1', get_post_meta( $post->ID, KKLPM_Landing_Page_Meta::WP_ASSETS, true ) );
+	}
+
+	/**
+	 * Ensures enabling theme header/footer does not silently reset the stored wp_assets preference.
+	 *
+	 * @return void
+	 */
+	public function test_save_meta_box_preserves_wp_assets_when_theme_header_footer_disables_the_control() {
+		$post = $this->create_page_for_administrator();
+
+		update_post_meta( $post->ID, KKLPM_Landing_Page_Meta::WP_ASSETS, '1' );
+
+		$_POST = $this->build_valid_post_payload(
+			array(
+				'kklpm_landing_enabled'             => '1',
+				'kklpm_landing_theme_header_footer' => '1',
 			)
 		);
 
@@ -300,6 +351,81 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Ensures edit_post alone is not enough: kklpm_manage_landing_pages is required too.
+	 *
+	 * @return void
+	 */
+	public function test_save_meta_box_rejects_user_with_edit_post_but_without_landing_pages_capability() {
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_author' => self::$no_landing_access_user_id,
+				'post_type'   => 'page',
+				'post_status' => 'publish',
+			)
+		);
+
+		wp_set_current_user( self::$no_landing_access_user_id );
+
+		$_POST = $this->build_valid_post_payload(
+			array(
+				'kklpm_landing_enabled' => '1',
+				'kklpm_landing_html'    => '<p>Blocked</p>',
+			)
+		);
+
+		$this->module->save_meta_box( $post->ID, $post );
+
+		$this->assertSame( '', get_post_meta( $post->ID, KKLPM_Landing_Page_Meta::ENABLED, true ) );
+		$this->assertSame( '', get_post_meta( $post->ID, KKLPM_Landing_Page_Meta::HTML, true ) );
+	}
+
+	/**
+	 * Ensures a user without kklpm_manage_landing_pages never gets the meta box registered.
+	 *
+	 * @return void
+	 */
+	public function test_register_meta_box_skips_for_user_without_landing_pages_capability() {
+		global $wp_meta_boxes;
+		$wp_meta_boxes = array();
+
+		$subscriber_id = self::factory()->user->create(
+			array(
+				'role' => 'subscriber',
+			)
+		);
+
+		wp_set_current_user( $subscriber_id );
+
+		$this->module->register_meta_box();
+
+		$page_meta_boxes = isset( $wp_meta_boxes['page']['normal']['high'] ) ? $wp_meta_boxes['page']['normal']['high'] : array();
+
+		$this->assertArrayNotHasKey( 'kklpm-landing-page-settings', $page_meta_boxes );
+	}
+
+	/**
+	 * Ensures an editor with kklpm_manage_landing_pages gets the meta box registered.
+	 *
+	 * @return void
+	 */
+	public function test_register_meta_box_registers_for_editor_with_landing_pages_capability() {
+		global $wp_meta_boxes;
+		$wp_meta_boxes = array();
+
+		$editor_id = self::factory()->user->create(
+			array(
+				'role' => 'editor',
+			)
+		);
+
+		wp_set_current_user( $editor_id );
+
+		$this->module->register_meta_box();
+
+		$this->assertArrayHasKey( 'kklpm-landing-page-settings', $wp_meta_boxes['page']['normal']['high'] );
+	}
+
+	/**
 	 * Ensures the meta box hides landing fields when the page is not enabled.
 	 *
 	 * @return void
@@ -332,6 +458,25 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'checked=\'checked\'', $markup );
 		$this->assertStringContainsString( 'id="kklpm-landing-fields" >', $markup );
 		$this->assertStringContainsString( '&lt;section&gt;Visible&lt;/section&gt;', $markup );
+	}
+
+	/**
+	 * Ensures the wp_head/wp_footer toggle is disabled when theme header/footer is enabled.
+	 *
+	 * @return void
+	 */
+	public function test_render_meta_box_disables_wp_assets_toggle_when_theme_header_footer_is_enabled() {
+		$post = $this->create_page_for_administrator();
+
+		update_post_meta( $post->ID, KKLPM_Landing_Page_Meta::ENABLED, '1' );
+		update_post_meta( $post->ID, KKLPM_Landing_Page_Meta::THEME_HEADER_FOOTER, '1' );
+		update_post_meta( $post->ID, KKLPM_Landing_Page_Meta::WP_ASSETS, '1' );
+
+		$markup = $this->render_meta_box_markup( $post );
+
+		$this->assertStringContainsString( 'id="kklpm-landing-wp-assets"', $markup );
+		$this->assertStringContainsString( 'disabled=\'disabled\'', $markup );
+		$this->assertStringContainsString( 'Used only with the isolated landing template.', $markup );
 	}
 
 	/**
@@ -404,6 +549,72 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 
 		$this->assertTrue( $header_called );
 		$this->assertTrue( $footer_called );
+	}
+
+	/**
+	 * Ensures block themes render template parts instead of calling classic theme wrappers.
+	 *
+	 * @return void
+	 */
+	public function test_landing_page_template_renders_block_theme_template_parts_when_enabled() {
+		$post = $this->create_page_for_administrator();
+		update_post_meta( $post->ID, KKLPM_Landing_Page_Meta::THEME_HEADER_FOOTER, '1' );
+
+		$header_called = false;
+		$footer_called = false;
+
+		add_filter(
+			'kklpm_is_block_theme',
+			function () {
+				return true;
+			}
+		);
+
+		add_filter(
+			'pre_get_block_template',
+			function ( $template, $id, $template_type ) {
+				unset( $template_type );
+
+				if ( false !== strpos( $id, '//header' ) ) {
+					return (object) array(
+						'content' => '<div class="fake-block-header">Header Part</div>',
+					);
+				}
+
+				if ( false !== strpos( $id, '//footer' ) ) {
+					return (object) array(
+						'content' => '<div class="fake-block-footer">Footer Part</div>',
+					);
+				}
+
+				return $template;
+			},
+			10,
+			3
+		);
+
+		add_action(
+			'get_header',
+			function () use ( &$header_called ) {
+				$header_called = true;
+			}
+		);
+		add_action(
+			'get_footer',
+			function () use ( &$footer_called ) {
+				$footer_called = true;
+			}
+		);
+
+		$markup = $this->render_landing_template( $post );
+
+		$this->assertFalse( $header_called );
+		$this->assertFalse( $footer_called );
+		$this->assertStringContainsString( 'class="kklpm-theme-header"', $markup );
+		$this->assertStringContainsString( 'class="fake-block-header"', $markup );
+		$this->assertStringContainsString( 'class="kklpm-landing-content"', $markup );
+		$this->assertStringContainsString( 'class="kklpm-theme-footer"', $markup );
+		$this->assertStringContainsString( 'class="fake-block-footer"', $markup );
 	}
 
 	/**

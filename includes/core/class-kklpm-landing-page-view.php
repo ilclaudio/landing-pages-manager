@@ -51,4 +51,56 @@ class KKLPM_Landing_Page_View {
 	public static function resolve_html_content( $html_content, $placeholder_html ) {
 		return '' === trim( (string) $html_content ) ? $placeholder_html : (string) $html_content;
 	}
+
+	/**
+	 * Whether the current theme should be treated as a block theme.
+	 *
+	 * @return bool
+	 */
+	public static function is_block_theme() {
+		$is_block_theme = function_exists( 'wp_is_block_theme' ) && wp_is_block_theme();
+
+		if ( ! function_exists( 'apply_filters' ) ) {
+			return $is_block_theme;
+		}
+
+		/**
+		 * Filters whether the landing page should use block-theme template parts.
+		 *
+		 * @param bool $is_block_theme Whether the active theme is a block theme.
+		 */
+		return (bool) apply_filters( 'kklpm_is_block_theme', $is_block_theme );
+	}
+
+	/**
+	 * Render the active theme header in a theme-compatible way.
+	 *
+	 * @return void
+	 */
+	public static function render_theme_header() {
+		if ( self::is_block_theme() && function_exists( 'block_template_part' ) ) {
+			echo '<header class="kklpm-theme-header">';
+			block_template_part( 'header' );
+			echo '</header>';
+			return;
+		}
+
+		get_header();
+	}
+
+	/**
+	 * Render the active theme footer in a theme-compatible way.
+	 *
+	 * @return void
+	 */
+	public static function render_theme_footer() {
+		if ( self::is_block_theme() && function_exists( 'block_template_part' ) ) {
+			echo '<footer class="kklpm-theme-footer">';
+			block_template_part( 'footer' );
+			echo '</footer>';
+			return;
+		}
+
+		get_footer();
+	}
 }
