@@ -8,9 +8,16 @@ This project uses [Semantic Versioning](http://semver.org/).
 
 TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 
+## DESIDERATA 2.0.0
+- Newsletter subscription.
+- Prestashop integration.
+- Chatbot integration.
 
 ## DESIDERATA 1.0.0
-
+- Manage multilanguage pages.
+- Create and modify landing page layout using AI.
+- Post section with infinite scrolling.
+- Contact form.
 
 
 ## [Unreleased]
