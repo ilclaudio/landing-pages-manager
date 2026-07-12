@@ -134,35 +134,41 @@ At this stage the plugin may still show the same homepage on each host — that'
 
 ## Step 5: Create the landing page test content
 
-Create or reuse a published WordPress page, for example with slug `lpmanager`. Optionally enable landing page mode for that page if the test case requires the isolated landing template.
+Create or reuse a published WordPress page, for example with slug `landing-page`. Optionally enable landing page mode for that page if the test case requires the isolated landing template.
 
 ## Step 6: Test the three mapping types
 
 Mapping `Value` fields never include a scheme — only the bare host or the bare path. The form rejects a scheme-prefixed value with an explicit error. The scheme belongs only in the browser address bar.
 
+URLs to visit for this test:
+
+1. Subpath → `http://lpmanager.test/promo-lpmanager`
+2. Subdomain → `http://promo.lpmanager.test/`
+3. External → `http://www.lpmanager.net/`
+
 ### 1. Subpath
 
-Mapping: `Type` = `subpath`, `Value` = `/landing-lpmanager`, `Page` = `lpmanager`, `Active` = enabled.
+Mapping: `Type` = `subpath`, `Value` = `/promo-lpmanager`, `Page` = `landing-page`, `Active` = enabled.
 
-Visit `http://lpmanager.test/landing-lpmanager`.
+Visit `http://lpmanager.test/promo-lpmanager`.
 
-Expected: the `lpmanager` page is served, the URL stays as-is, no redirect.
+Expected: the `landing-page` page is served, the URL stays as-is, no redirect.
 
 ### 2. Subdomain
 
-Mapping: `Type` = `subdomain`, `Value` = `promo.lpmanager.test`, `Page` = `lpmanager`, `Active` = enabled.
+Mapping: `Type` = `subdomain`, `Value` = `promo.lpmanager.test`, `Page` = `landing-page`, `Active` = enabled.
 
 Visit `http://promo.lpmanager.test/`.
 
-Expected: the `lpmanager` page is served, the URL stays as-is, no redirect to `lpmanager.test`.
+Expected: the `landing-page` page is served, the URL stays as-is, no redirect to `lpmanager.test`.
 
 ### 3. External
 
-Mapping: `Type` = `external`, `Value` = `www.lpmanager.net`, `Page` = `lpmanager`, `Active` = enabled.
+Mapping: `Type` = `external`, `Value` = `www.lpmanager.net`, `Page` = `landing-page`, `Active` = enabled.
 
 Visit `http://www.lpmanager.net/`.
 
-Expected: the `lpmanager` page is served, the URL stays as-is, no redirect to the main local hostname.
+Expected: the `landing-page` page is served, the URL stays as-is, no redirect to the main local hostname.
 
 ## Additional checks
 
@@ -182,7 +188,7 @@ Point a mapping to a page, then trash that page. Expected: visiting the mapped U
 
 ### Subpath collision
 
-Create a `subpath` mapping matching an existing native WordPress path (e.g. value `/lpmanager`). Expected: the real native WordPress content keeps winning; the router does not hijack the existing route.
+Create a `subpath` mapping matching an existing native WordPress path (e.g. value `/landing-page`). Expected: the real native WordPress content keeps winning; the router does not hijack the existing route.
 
 ## Known gap
 
@@ -200,7 +206,7 @@ Symptom: any URL under `http://localhost/`, not just `/lpmanager/`, breaks as so
 
 ### A path-based URL 404s on one host but works on another
 
-Symptom: `http://lpmanager.test/landing-lpmanager` (or any non-root URL) doesn't load, while `http://localhost/lpmanager/landing-lpmanager` does (or vice versa). Cause: `home`/`siteurl` and the resulting `.htaccess` `RewriteBase` only match one `DocumentRoot` depth at a time — see "Recommended setup" and Step 4. Fix: confirm `home`/`siteurl` are `http://lpmanager.test`, then resave Permalinks to regenerate `.htaccess`.
+Symptom: `http://lpmanager.test/promo-lpmanager` (or any non-root URL) doesn't load, while `http://localhost/lpmanager/promo-lpmanager` does (or vice versa). Cause: `home`/`siteurl` and the resulting `.htaccess` `RewriteBase` only match one `DocumentRoot` depth at a time — see "Recommended setup" and Step 4. Fix: confirm `home`/`siteurl` are `http://lpmanager.test`, then resave Permalinks to regenerate `.htaccess`.
 
 ### Mapping saved but never matches
 
