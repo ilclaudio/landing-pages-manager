@@ -1,4 +1,4 @@
-# XAMPP Domain Router Testing
+# System Configuration With Xampp
 
 This document explains how to use XAMPP on Windows to test all three Domain Router mapping types implemented by KK Landing Pages Manager:
 
