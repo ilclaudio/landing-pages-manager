@@ -292,6 +292,48 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Ensures the rendered "Copy link" action carries the correct full URL per mapping type.
+	 *
+	 * @return void
+	 */
+	public function test_render_page_outputs_full_url_for_each_mapping_type() {
+		$page_id = $this->create_published_page( 'copy-link-target' );
+
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'    => 'subpath',
+				'value'   => '/promo',
+				'page_id' => $page_id,
+				'active'  => 1,
+			)
+		);
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'    => 'subdomain',
+				'value'   => 'promo.example.com',
+				'page_id' => $page_id,
+				'active'  => 1,
+			)
+		);
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'    => 'external',
+				'value'   => 'www.example.org',
+				'page_id' => $page_id,
+				'active'  => 1,
+			)
+		);
+
+		ob_start();
+		$this->admin_page->render_page();
+		$markup = (string) ob_get_clean();
+
+		$this->assertStringContainsString( 'data-link="' . esc_url( home_url( '/promo' ) ) . '"', $markup );
+		$this->assertStringContainsString( 'data-link="http://promo.example.com/"', $markup );
+		$this->assertStringContainsString( 'data-link="http://www.example.org/"', $markup );
+	}
+
+	/**
 	 * Creates a published page with a fixed slug.
 	 *
 	 * @param string $slug Page slug.

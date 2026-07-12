@@ -249,11 +249,58 @@ class KKLPM_Domain_Router_Admin_Page {
 									<a href="<?php echo esc_url( $this->get_row_action_url( 'kklpm_domain_router_delete_mapping', (int) $mapping['id'] ) ); ?>">
 										<?php esc_html_e( 'Delete', 'landing-pages-manager' ); ?>
 									</a>
+									|
+									<a href="#" class="kklpm-copy-link" data-link="<?php echo esc_url( $this->get_mapping_full_url( $mapping ) ); ?>">
+										<?php esc_html_e( 'Copy link', 'landing-pages-manager' ); ?>
+									</a>
 								</td>
 							</tr>
 						<?php endforeach; ?>
 					</tbody>
 				</table>
+				<script>
+					( function() {
+						function copyText( text ) {
+							if ( navigator.clipboard && navigator.clipboard.writeText ) {
+								return navigator.clipboard.writeText( text );
+							}
+
+							var textarea = document.createElement( 'textarea' );
+							textarea.value = text;
+							textarea.style.position = 'fixed';
+							textarea.style.opacity = '0';
+							document.body.appendChild( textarea );
+							textarea.focus();
+							textarea.select();
+
+							try {
+								document.execCommand( 'copy' );
+							} catch ( error ) {
+								// Nothing more we can do here; the user can still select the link manually.
+							}
+
+							document.body.removeChild( textarea );
+
+							return Promise.resolve();
+						}
+
+						document.querySelectorAll( '.kklpm-copy-link' ).forEach( function( link ) {
+							link.addEventListener( 'click', function( event ) {
+								event.preventDefault();
+
+								var originalText = link.textContent;
+
+								copyText( link.getAttribute( 'data-link' ) ).then( function() {
+									link.textContent = <?php echo wp_json_encode( __( 'Copied!', 'landing-pages-manager' ) ); ?>;
+
+									setTimeout( function() {
+										link.textContent = originalText;
+									}, 1500 );
+								} );
+							} );
+						} );
+					}() );
+				</script>
 			<?php endif; ?>
 		</div>
 		<?php
@@ -414,6 +461,25 @@ class KKLPM_Domain_Router_Admin_Page {
 			$page->post_title,
 			$page->ID
 		);
+	}
+
+	/**
+	 * Builds the full front-end URL a mapping resolves to.
+	 *
+	 * @param array $mapping Mapping data.
+	 * @return string
+	 */
+	protected function get_mapping_full_url( array $mapping ) {
+		$type  = isset( $mapping['type'] ) ? (string) $mapping['type'] : '';
+		$value = isset( $mapping['value'] ) ? (string) $mapping['value'] : '';
+
+		if ( 'subpath' === $type ) {
+			return home_url( $value );
+		}
+
+		$scheme = is_ssl() ? 'https' : 'http';
+
+		return $scheme . '://' . $value . '/';
 	}
 
 	/**
