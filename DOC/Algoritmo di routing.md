@@ -305,3 +305,22 @@ Quindi il comportamento attuale e` volutamente semplice:
 - match esatto host/path
 - riscrittura della query verso una pagina WordPress
 - eventuale sostituzione del template in `template_include`
+
+## 13. Direzione prevista per il multilingua
+
+Per l'evoluzione Step 3, la direzione architetturale prevista non e` "un mapping per ogni lingua" come flusso standard.
+
+L'idea e` questa:
+
+- il router continua a risolvere `host/path -> pagina sorgente`
+- se e` attivo un plugin supportato (per esempio Polylang o WPML), un adapter interno risolve:
+  - lingua corrente
+  - pagina tradotta corrispondente
+- se non e` attivo nessun plugin multilingua, il `Null adapter` lascia invariato il comportamento attuale del plugin
+
+Quindi, nello scenario standard futuro:
+
+- il multilingua sara` **adapter-first**
+- il campo `lang` del router non dovrebbe servire come configurazione obbligatoria
+- per coerenza, il backoffice standard del Domain Router non espone piu` il campo `lang` nel form di insert/edit
+- l'eventuale colonna `lang` resta, per ora, una compatibilita` tecnica o una leva avanzata da rivalutare solo se emergera` un caso d'uso reale

@@ -64,12 +64,11 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 			'mapping_id'                                  => '0',
 			KKLPM_Domain_Router_Admin_Page::SAVE_NONCE_NAME => wp_create_nonce( KKLPM_Domain_Router_Admin_Page::SAVE_NONCE_ACTION ),
 			'mapping'                                     => array(
-				'type'    => 'subpath',
-				'value'   => ' campaign/ ',
-				'page_id' => (string) $page_id,
-				'active'  => '1',
+				'type'         => 'subpath',
+				'value'        => ' campaign/ ',
+				'page_id'      => (string) $page_id,
+				'active'       => '1',
 				'is_canonical' => '1',
-				'lang'    => 'en',
 			),
 		);
 
@@ -81,7 +80,7 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 		$this->assertSame( '/campaign', $mappings[0]['value'] );
 		$this->assertSame( 'subpath', $mappings[0]['type'] );
 		$this->assertSame( '1', $mappings[0]['is_canonical'] );
-		$this->assertSame( 'en', $mappings[0]['lang'] );
+		$this->assertNull( $mappings[0]['lang'] );
 	}
 
 	/**
@@ -128,12 +127,11 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 			'mapping_id'                                  => '0',
 			KKLPM_Domain_Router_Admin_Page::SAVE_NONCE_NAME => wp_create_nonce( KKLPM_Domain_Router_Admin_Page::SAVE_NONCE_ACTION ),
 			'mapping'                                     => array(
-				'type'    => 'subpath',
-				'value'   => 'blocked',
-				'page_id' => (string) $page_id,
-				'active'  => '1',
+				'type'         => 'subpath',
+				'value'        => 'blocked',
+				'page_id'      => (string) $page_id,
+				'active'       => '1',
 				'is_canonical' => '0',
-				'lang'    => '',
 			),
 		);
 
@@ -155,12 +153,11 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 			'mapping_id'                                  => '0',
 			KKLPM_Domain_Router_Admin_Page::SAVE_NONCE_NAME => wp_create_nonce( KKLPM_Domain_Router_Admin_Page::SAVE_NONCE_ACTION ),
 			'mapping'                                     => array(
-				'type'    => 'subdomain',
-				'value'   => 'http://promo.example.com',
-				'page_id' => (string) $page_id,
-				'active'  => '1',
+				'type'         => 'subdomain',
+				'value'        => 'http://promo.example.com',
+				'page_id'      => (string) $page_id,
+				'active'       => '1',
 				'is_canonical' => '0',
-				'lang'    => '',
 			),
 		);
 
@@ -185,6 +182,7 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 				'value'   => 'promo.example.org',
 				'page_id' => $page_id,
 				'active'  => 1,
+				'lang'    => 'en',
 			)
 		);
 
@@ -193,12 +191,11 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 			'mapping_id'                                  => (string) $mapping_id,
 			KKLPM_Domain_Router_Admin_Page::SAVE_NONCE_NAME => wp_create_nonce( KKLPM_Domain_Router_Admin_Page::SAVE_NONCE_ACTION ),
 			'mapping'                                     => array(
-				'type'    => 'external',
-				'value'   => 'landing.example.net',
-				'page_id' => (string) $page_id,
-				'active'  => '0',
+				'type'         => 'external',
+				'value'        => 'landing.example.net',
+				'page_id'      => (string) $page_id,
+				'active'       => '0',
 				'is_canonical' => '1',
-				'lang'    => '',
 			),
 		);
 
@@ -210,7 +207,7 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 		$this->assertSame( 'landing.example.net', $mapping['value'] );
 		$this->assertSame( '0', $mapping['active'] );
 		$this->assertSame( '1', $mapping['is_canonical'] );
-		$this->assertNull( $mapping['lang'] );
+		$this->assertSame( 'en', $mapping['lang'] );
 	}
 
 	/**
@@ -282,7 +279,6 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 				'page_id' => '42',
 				'active'  => '1',
 				'is_canonical' => '1',
-				'lang'    => 'it',
 			)
 		);
 
@@ -293,7 +289,7 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 				'page_id' => 42,
 				'active'  => 1,
 				'is_canonical' => 1,
-				'lang'    => 'it',
+				'lang'    => '',
 			),
 			$sanitized
 		);
@@ -336,7 +332,6 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 				'page_id'      => (string) $page_id,
 				'active'       => '1',
 				'is_canonical' => '1',
-				'lang'         => '',
 			),
 		);
 
@@ -347,6 +342,20 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 
 		$this->assertSame( '0', $first_mapping['is_canonical'] );
 		$this->assertSame( '1', $second_mapping['is_canonical'] );
+	}
+
+	/**
+	 * Ensures the standard admin UI no longer exposes the legacy Language field.
+	 *
+	 * @return void
+	 */
+	public function test_render_page_hides_legacy_language_field() {
+		ob_start();
+		$this->admin_page->render_page();
+		$markup = (string) ob_get_clean();
+
+		$this->assertStringNotContainsString( 'kklpm-domain-lang', $markup );
+		$this->assertStringNotContainsString( '>Language<', $markup );
 	}
 
 	/**

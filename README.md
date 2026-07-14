@@ -10,6 +10,8 @@ The **Domain Router** lets a landing page be reached through a subdomain, a subp
 
 When the same landing page is reachable through multiple hosts, one mapping can be marked as **canonical**. The plugin then emits a `<link rel="canonical">` tag for that page, while still serving the requested host without redirecting the visitor.
 
+Planned multilingual support follows an **adapter-first** model: if a supported multilingual plugin such as Polylang or WPML is active, KKLPM will resolve the current language and translated landing page through that plugin's adapter. In the standard flow, language selection should not require separate router mappings per language.
+
 ## Requirements
 
 - WordPress 6.2 or later
@@ -34,6 +36,8 @@ When the same landing page is reachable through multiple hosts, one mapping can 
 2. Add a mapping: choose a type (subdomain, subpath, or external domain), a value, and the target page.
 3. Optionally mark one mapping for that page as **canonical** if search engines should treat that host/path as the official URL for the content.
 4. Configure DNS and your web server so requests for that host reach this WordPress installation — the plugin does not automate DNS or virtual host setup.
+
+In the current standard admin flow, the router does not expose a per-mapping language field: multilingual resolution is planned to be adapter-driven, not based on manually creating one route per language.
 
 ## Permissions
 
