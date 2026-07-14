@@ -76,11 +76,13 @@ class KKLPM_Domain_Map_Repository {
 			value varchar(255) NOT NULL,
 			page_id bigint(20) unsigned NOT NULL,
 			active tinyint(1) NOT NULL DEFAULT 1,
+			is_canonical tinyint(1) NOT NULL DEFAULT 0,
 			lang varchar(20) NULL DEFAULT NULL,
 			PRIMARY KEY  (id),
 			KEY type_value (type, value(191)),
 			KEY page_id (page_id),
-			KEY active (active)
+			KEY active (active),
+			KEY page_active_canonical (page_id, active, is_canonical)
 		) {$charset_collate};";
 	}
 
@@ -103,10 +105,20 @@ class KKLPM_Domain_Map_Repository {
 		$result = $wpdb->insert(
 			self::get_table_name(),
 			$prepared,
-			array( '%s', '%s', '%d', '%d', '%s' )
+			array( '%s', '%s', '%d', '%d', '%d', '%s' )
 		);
 
-		return $result ? (int) $wpdb->insert_id : false;
+		if ( ! $result ) {
+			return false;
+		}
+
+		$mapping_id = (int) $wpdb->insert_id;
+
+		if ( ! empty( $prepared['is_canonical'] ) ) {
+			self::clear_other_canonical_mappings( (int) $prepared['page_id'], $mapping_id );
+		}
+
+		return $mapping_id;
 	}
 
 	/**
@@ -130,11 +142,19 @@ class KKLPM_Domain_Map_Repository {
 			self::get_table_name(),
 			$prepared,
 			array( 'id' => (int) $id ),
-			array( '%s', '%s', '%d', '%d', '%s' ),
+			array( '%s', '%s', '%d', '%d', '%d', '%s' ),
 			array( '%d' )
 		);
 
-		return false !== $result;
+		if ( false === $result ) {
+			return false;
+		}
+
+		if ( ! empty( $prepared['is_canonical'] ) ) {
+			self::clear_other_canonical_mappings( (int) $prepared['page_id'], (int) $id );
+		}
+
+		return true;
 	}
 
 	/**
@@ -215,6 +235,50 @@ class KKLPM_Domain_Map_Repository {
 	}
 
 	/**
+	 * Get all active mappings for a specific page.
+	 *
+	 * @param int $page_id Page ID.
+	 * @return array
+	 */
+	public static function get_active_mappings_for_page( $page_id ) {
+		global $wpdb;
+		$table_name = self::get_table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Intentional repository read for plugin-owned table name.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table_name} WHERE page_id = %d AND active = 1 ORDER BY id ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Plugin-owned table name.
+				(int) $page_id
+			),
+			ARRAY_A
+		);
+
+		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
+	 * Get the active canonical mapping for a page, if one exists.
+	 *
+	 * @param int $page_id Page ID.
+	 * @return array|null
+	 */
+	public static function get_canonical_mapping_for_page( $page_id ) {
+		global $wpdb;
+		$table_name = self::get_table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Intentional repository read for plugin-owned table name.
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$table_name} WHERE page_id = %d AND active = 1 AND is_canonical = 1 ORDER BY id ASC LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Plugin-owned table name.
+				(int) $page_id
+			),
+			ARRAY_A
+		);
+
+		return is_array( $row ) ? $row : null;
+	}
+
+	/**
 	 * Find active candidate mappings by type and normalized value.
 	 *
 	 * @param string $type             Mapping type.
@@ -292,11 +356,33 @@ class KKLPM_Domain_Map_Repository {
 		}
 
 		return array(
-			'type'    => $type,
-			'value'   => $value,
-			'page_id' => $page_id,
-			'active'  => empty( $data['active'] ) ? 0 : 1,
-			'lang'    => '' === $lang ? null : $lang,
+			'type'         => $type,
+			'value'        => $value,
+			'page_id'      => $page_id,
+			'active'       => empty( $data['active'] ) ? 0 : 1,
+			'is_canonical' => empty( $data['is_canonical'] ) ? 0 : 1,
+			'lang'         => '' === $lang ? null : $lang,
+		);
+	}
+
+	/**
+	 * Clears the canonical flag from other mappings belonging to the same page.
+	 *
+	 * @param int $page_id            Page ID.
+	 * @param int $excluded_mapping_id Mapping ID to keep canonical.
+	 * @return void
+	 */
+	protected static function clear_other_canonical_mappings( $page_id, $excluded_mapping_id ) {
+		global $wpdb;
+		$table_name = self::get_table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Intentional repository write for plugin-owned table name.
+		$wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$table_name} SET is_canonical = 0 WHERE page_id = %d AND id != %d AND is_canonical = 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Plugin-owned table name.
+				(int) $page_id,
+				(int) $excluded_mapping_id
+			)
 		);
 	}
 

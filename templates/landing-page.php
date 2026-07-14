@@ -32,6 +32,9 @@ else :
 	<head>
 		<meta charset="<?php bloginfo( 'charset' ); ?>" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<?php if ( ! $load_wp_assets ) : ?>
+			<?php KKLPM_Domain_Router_Module::render_canonical_tag_for_page( $post_id ); ?>
+		<?php endif; ?>
 		<?php if ( $load_wp_assets ) : ?>
 			<?php wp_head(); ?>
 		<?php endif; ?>

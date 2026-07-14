@@ -7,7 +7,7 @@ KK Landing Pages Manager (KKLPM) does not define custom WordPress roles. Instead
 | Capability | Purpose | Default roles |
 |---|---|---|
 | `kklpm_manage_landing_pages` | Enable/disable the landing page mode on a page and configure it: "Show theme header/footer", "Load WordPress CSS/JS". | Administrator, Editor |
-| `kklpm_manage_domain_router` | Access the Domain Router settings page and manage mappings (create, edit, enable/disable, delete). | Administrator |
+| `kklpm_manage_domain_router` | Access the Domain Router settings page and manage mappings (create, edit, enable/disable, delete, set canonical mapping). | Administrator |
 
 Both capabilities are independent from each other. An Editor can manage landing pages but cannot access the Domain Router, unless an administrator explicitly grants `kklpm_manage_domain_router` to another role or user.
 

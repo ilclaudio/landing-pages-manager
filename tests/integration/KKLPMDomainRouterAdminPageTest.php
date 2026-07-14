@@ -68,6 +68,7 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 				'value'   => ' campaign/ ',
 				'page_id' => (string) $page_id,
 				'active'  => '1',
+				'is_canonical' => '1',
 				'lang'    => 'en',
 			),
 		);
@@ -79,6 +80,7 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 		$this->assertCount( 1, $mappings );
 		$this->assertSame( '/campaign', $mappings[0]['value'] );
 		$this->assertSame( 'subpath', $mappings[0]['type'] );
+		$this->assertSame( '1', $mappings[0]['is_canonical'] );
 		$this->assertSame( 'en', $mappings[0]['lang'] );
 	}
 
@@ -130,6 +132,7 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 				'value'   => 'blocked',
 				'page_id' => (string) $page_id,
 				'active'  => '1',
+				'is_canonical' => '0',
 				'lang'    => '',
 			),
 		);
@@ -156,6 +159,7 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 				'value'   => 'http://promo.example.com',
 				'page_id' => (string) $page_id,
 				'active'  => '1',
+				'is_canonical' => '0',
 				'lang'    => '',
 			),
 		);
@@ -193,6 +197,7 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 				'value'   => 'landing.example.net',
 				'page_id' => (string) $page_id,
 				'active'  => '0',
+				'is_canonical' => '1',
 				'lang'    => '',
 			),
 		);
@@ -204,6 +209,7 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 		$this->assertSame( 'external', $mapping['type'] );
 		$this->assertSame( 'landing.example.net', $mapping['value'] );
 		$this->assertSame( '0', $mapping['active'] );
+		$this->assertSame( '1', $mapping['is_canonical'] );
 		$this->assertNull( $mapping['lang'] );
 	}
 
@@ -275,6 +281,7 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 				'value'   => ' promo/ ',
 				'page_id' => '42',
 				'active'  => '1',
+				'is_canonical' => '1',
 				'lang'    => 'it',
 			)
 		);
@@ -285,10 +292,61 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 				'value'   => 'promo/',
 				'page_id' => 42,
 				'active'  => 1,
+				'is_canonical' => 1,
 				'lang'    => 'it',
 			),
 			$sanitized
 		);
+	}
+
+	/**
+	 * Ensures saving a canonical mapping clears the flag from other mappings of the same page.
+	 *
+	 * @return void
+	 */
+	public function test_handle_save_action_keeps_only_one_canonical_mapping_per_page() {
+		$page_id = $this->create_published_page( 'admin-canonical' );
+
+		$first_mapping_id = KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'    => 'subdomain',
+				'value'   => 'promo.example.org',
+				'page_id' => $page_id,
+				'active'  => 1,
+				'is_canonical' => 1,
+			)
+		);
+		$second_mapping_id = KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'    => 'external',
+				'value'   => 'landing.example.net',
+				'page_id' => $page_id,
+				'active'  => 1,
+				'is_canonical' => 0,
+			)
+		);
+
+		$_POST = array(
+			'action'                                        => 'kklpm_domain_router_save_mapping',
+			'mapping_id'                                    => (string) $second_mapping_id,
+			KKLPM_Domain_Router_Admin_Page::SAVE_NONCE_NAME => wp_create_nonce( KKLPM_Domain_Router_Admin_Page::SAVE_NONCE_ACTION ),
+			'mapping'                                       => array(
+				'type'         => 'external',
+				'value'        => 'landing.example.net',
+				'page_id'      => (string) $page_id,
+				'active'       => '1',
+				'is_canonical' => '1',
+				'lang'         => '',
+			),
+		);
+
+		$this->admin_page->handle_save_action();
+
+		$first_mapping  = KKLPM_Domain_Map_Repository::get_mapping( $first_mapping_id );
+		$second_mapping = KKLPM_Domain_Map_Repository::get_mapping( $second_mapping_id );
+
+		$this->assertSame( '0', $first_mapping['is_canonical'] );
+		$this->assertSame( '1', $second_mapping['is_canonical'] );
 	}
 
 	/**

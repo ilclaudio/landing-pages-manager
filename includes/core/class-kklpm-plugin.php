@@ -58,6 +58,7 @@ class KKLPM_Plugin {
 	 */
 	protected function register_hooks() {
 		add_action( 'init', array( $this, 'load_textdomain' ) );
+		add_action( 'admin_init', array( $this, 'maybe_upgrade_domain_router_schema' ) );
 		add_action( 'admin_init', array( $this, 'grant_default_capabilities' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( KKLPM_PLUGIN_FILE ), array( $this, 'add_plugin_action_links' ) );
 
@@ -81,6 +82,15 @@ class KKLPM_Plugin {
 		$this->add_capability_if_missing( 'administrator', 'kklpm_manage_landing_pages' );
 		$this->add_capability_if_missing( 'administrator', 'kklpm_manage_domain_router' );
 		$this->add_capability_if_missing( 'editor', 'kklpm_manage_landing_pages' );
+	}
+
+	/**
+	 * Keeps the custom domain-router table schema in sync on existing installs.
+	 *
+	 * @return void
+	 */
+	public function maybe_upgrade_domain_router_schema() {
+		KKLPM_Domain_Map_Repository::create_table();
 	}
 
 	/**

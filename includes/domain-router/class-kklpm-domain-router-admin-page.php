@@ -169,6 +169,22 @@ class KKLPM_Domain_Router_Admin_Page {
 								</label>
 							</td>
 						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Canonical', 'landing-pages-manager' ); ?></th>
+							<td>
+								<label for="kklpm-domain-is-canonical">
+									<input
+										type="checkbox"
+										name="mapping[is_canonical]"
+										id="kklpm-domain-is-canonical"
+										value="1"
+										<?php checked( $edit_mapping && ! empty( $edit_mapping['is_canonical'] ) ); ?>
+									/>
+									<?php esc_html_e( 'Use this mapping as the canonical URL for its page', 'landing-pages-manager' ); ?>
+								</label>
+								<p class="description"><?php esc_html_e( 'Only one mapping per page can remain canonical; saving this one will unset the flag on the others.', 'landing-pages-manager' ); ?></p>
+							</td>
+						</tr>
 					</tbody>
 				</table>
 				<?php submit_button( $edit_mapping ? __( 'Update Mapping', 'landing-pages-manager' ) : __( 'Add Mapping', 'landing-pages-manager' ) ); ?>
@@ -226,6 +242,7 @@ class KKLPM_Domain_Router_Admin_Page {
 							<th><?php esc_html_e( 'Value', 'landing-pages-manager' ); ?></th>
 							<th><?php esc_html_e( 'Page', 'landing-pages-manager' ); ?></th>
 							<th><?php esc_html_e( 'Language', 'landing-pages-manager' ); ?></th>
+							<th><?php esc_html_e( 'Canonical', 'landing-pages-manager' ); ?></th>
 							<th><?php esc_html_e( 'Status', 'landing-pages-manager' ); ?></th>
 							<th><?php esc_html_e( 'Actions', 'landing-pages-manager' ); ?></th>
 						</tr>
@@ -238,6 +255,7 @@ class KKLPM_Domain_Router_Admin_Page {
 								<td><code><?php echo esc_html( (string) $mapping['value'] ); ?></code></td>
 								<td><?php echo esc_html( $this->get_page_label( (int) $mapping['page_id'] ) ); ?></td>
 								<td><?php echo esc_html( (string) $mapping['lang'] ); ?></td>
+								<td><?php echo ! empty( $mapping['is_canonical'] ) ? esc_html__( 'Yes', 'landing-pages-manager' ) : esc_html__( 'No', 'landing-pages-manager' ); ?></td>
 								<td><?php echo ! empty( $mapping['active'] ) ? esc_html__( 'Active', 'landing-pages-manager' ) : esc_html__( 'Inactive', 'landing-pages-manager' ); ?></td>
 								<td>
 									<a href="<?php echo esc_url( self::get_page_url( array( 'edit' => (int) $mapping['id'] ) ) ); ?>"><?php esc_html_e( 'Edit', 'landing-pages-manager' ); ?></a>
@@ -367,11 +385,12 @@ class KKLPM_Domain_Router_Admin_Page {
 		$updated = KKLPM_Domain_Map_Repository::update_mapping(
 			$mapping_id,
 			array(
-				'type'    => $mapping['type'],
-				'value'   => $mapping['value'],
-				'page_id' => $mapping['page_id'],
-				'active'  => empty( $mapping['active'] ) ? 1 : 0,
-				'lang'    => $mapping['lang'],
+				'type'         => $mapping['type'],
+				'value'        => $mapping['value'],
+				'page_id'      => $mapping['page_id'],
+				'active'       => empty( $mapping['active'] ) ? 1 : 0,
+				'is_canonical' => empty( $mapping['is_canonical'] ) ? 0 : 1,
+				'lang'         => $mapping['lang'],
 			)
 		);
 
@@ -386,11 +405,12 @@ class KKLPM_Domain_Router_Admin_Page {
 	 */
 	public function sanitize_mapping_input( array $input ) {
 		return array(
-			'type'    => isset( $input['type'] ) ? sanitize_key( $input['type'] ) : '',
-			'value'   => isset( $input['value'] ) ? sanitize_text_field( (string) $input['value'] ) : '',
-			'page_id' => isset( $input['page_id'] ) ? (int) $input['page_id'] : 0,
-			'active'  => empty( $input['active'] ) ? 0 : 1,
-			'lang'    => isset( $input['lang'] ) ? sanitize_text_field( (string) $input['lang'] ) : '',
+			'type'         => isset( $input['type'] ) ? sanitize_key( $input['type'] ) : '',
+			'value'        => isset( $input['value'] ) ? sanitize_text_field( (string) $input['value'] ) : '',
+			'page_id'      => isset( $input['page_id'] ) ? (int) $input['page_id'] : 0,
+			'active'       => empty( $input['active'] ) ? 0 : 1,
+			'is_canonical' => empty( $input['is_canonical'] ) ? 0 : 1,
+			'lang'         => isset( $input['lang'] ) ? sanitize_text_field( (string) $input['lang'] ) : '',
 		);
 	}
 

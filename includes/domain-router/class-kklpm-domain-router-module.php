@@ -26,6 +26,7 @@ class KKLPM_Domain_Router_Module {
 	 */
 	public function register() {
 		add_action( 'parse_request', array( $this, 'handle_parse_request' ) );
+		add_action( 'wp_head', array( $this, 'render_current_request_canonical_tag' ), 1 );
 	}
 
 	/**
@@ -128,6 +129,68 @@ class KKLPM_Domain_Router_Module {
 	}
 
 	/**
+	 * Renders a canonical tag for the current front-end page request when needed.
+	 *
+	 * @return void
+	 */
+	public function render_current_request_canonical_tag() {
+		if ( ! is_singular( 'page' ) ) {
+			return;
+		}
+
+		self::render_canonical_tag_for_page( get_queried_object_id() );
+	}
+
+	/**
+	 * Resolves the canonical URL for a page with active router mappings.
+	 *
+	 * @param int $page_id Page ID.
+	 * @return string
+	 */
+	public static function get_canonical_url_for_page( $page_id ) {
+		$page_id = (int) $page_id;
+
+		if ( $page_id <= 0 ) {
+			return '';
+		}
+
+		$canonical_mapping = KKLPM_Domain_Map_Repository::get_canonical_mapping_for_page( $page_id );
+
+		if ( is_array( $canonical_mapping ) ) {
+			return self::build_mapping_url( $canonical_mapping );
+		}
+
+		$active_mappings = KKLPM_Domain_Map_Repository::get_active_mappings_for_page( $page_id );
+
+		if ( empty( $active_mappings ) ) {
+			return '';
+		}
+
+		$permalink = get_permalink( $page_id );
+
+		return is_string( $permalink ) ? $permalink : '';
+	}
+
+	/**
+	 * Renders a canonical link tag for a page when a canonical URL exists.
+	 *
+	 * @param int $page_id Page ID.
+	 * @return void
+	 */
+	public static function render_canonical_tag_for_page( $page_id ) {
+		$canonical_url = self::get_canonical_url_for_page( $page_id );
+
+		if ( '' === $canonical_url ) {
+			return;
+		}
+
+		printf(
+			'<link rel="canonical" href="%s" />' . "\n",
+			esc_url( $canonical_url )
+		);
+	}
+
+	/**
 	 * Whether the current request should bypass custom routing.
 	 *
 	 * @return bool
@@ -219,5 +282,32 @@ class KKLPM_Domain_Router_Module {
 		}
 
 		return 0 !== $existing_post_id && $existing_post_id !== $target_page_id;
+	}
+
+	/**
+	 * Builds the absolute front-end URL represented by a mapping.
+	 *
+	 * @param array $mapping Mapping data.
+	 * @return string
+	 */
+	protected static function build_mapping_url( array $mapping ) {
+		$type  = isset( $mapping['type'] ) ? (string) $mapping['type'] : '';
+		$value = isset( $mapping['value'] ) ? (string) $mapping['value'] : '';
+
+		if ( '' === $value ) {
+			return '';
+		}
+
+		if ( 'subpath' === $type ) {
+			return home_url( $value );
+		}
+
+		$scheme = is_ssl() ? 'https' : wp_parse_url( home_url(), PHP_URL_SCHEME );
+
+		if ( ! is_string( $scheme ) || '' === $scheme ) {
+			$scheme = 'http';
+		}
+
+		return $scheme . '://' . $value . '/';
 	}
 }

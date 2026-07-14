@@ -8,6 +8,8 @@ When a page is enabled as a landing page, the plugin serves an isolated HTML doc
 
 The **Domain Router** lets a landing page be reached through a subdomain, a subpath, or an entirely external domain, while keeping the original URL in the browser — no redirect is involved. The plugin only handles the WordPress-side routing; DNS and web server configuration remain the site administrator's responsibility.
 
+When the same landing page is reachable through multiple hosts, one mapping can be marked as **canonical**. The plugin then emits a `<link rel="canonical">` tag for that page, while still serving the requested host without redirecting the visitor.
+
 ## Requirements
 
 - WordPress 6.2 or later
@@ -30,7 +32,8 @@ The **Domain Router** lets a landing page be reached through a subdomain, a subp
 **Route a custom domain to the page**
 1. Go to **Settings → Landing Domain Router**, or use the **Manage routes** link on the Plugins list or inside the Landing Page meta box.
 2. Add a mapping: choose a type (subdomain, subpath, or external domain), a value, and the target page.
-3. Configure DNS and your web server so requests for that host reach this WordPress installation — the plugin does not automate DNS or virtual host setup.
+3. Optionally mark one mapping for that page as **canonical** if search engines should treat that host/path as the official URL for the content.
+4. Configure DNS and your web server so requests for that host reach this WordPress installation — the plugin does not automate DNS or virtual host setup.
 
 ## Permissions
 

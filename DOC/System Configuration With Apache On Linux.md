@@ -148,7 +148,17 @@ These complement the core three mapping tests and mirror the manual checklist in
 
 ### CRUD
 
-In the Domain Router admin page, verify you can create, edit, enable/disable, and delete a mapping.
+In the Domain Router admin page, verify you can create, edit, enable/disable, delete, and mark a mapping as canonical.
+
+### Canonical URL
+
+If the same page is reachable through multiple mappings, mark one of them as canonical and visit one of the alternative URLs.
+
+Expected:
+
+- the page is still served on the requested host/path, with no redirect;
+- the HTML contains a single `<link rel="canonical">`;
+- that tag points to the mapping marked as canonical.
 
 ### Inactive mapping
 
@@ -161,10 +171,6 @@ Point a mapping to a page, then trash that page. Expected: visiting the mapped U
 ### Subpath collision
 
 Create a `subpath` mapping matching an existing native WordPress path. Expected: the real native WordPress content keeps winning; the router does not hijack the existing route.
-
-## Known gap
-
-Canonical URL emission is still not implemented in the plugin — you cannot yet validate the original Step 2 requirement about emitting a canonical URL when the same page is reachable through multiple hosts. On a public server this matters more than in local testing: search engines may index the same content under several hostnames until this is implemented.
 
 ## Production-specific notes
 

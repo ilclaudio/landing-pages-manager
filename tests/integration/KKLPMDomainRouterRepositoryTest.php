@@ -50,6 +50,7 @@ class KKLPMDomainRouterRepositoryTest extends WP_UnitTestCase {
 		$this->assertContains( 'value', $columns );
 		$this->assertContains( 'page_id', $columns );
 		$this->assertContains( 'active', $columns );
+		$this->assertContains( 'is_canonical', $columns );
 		$this->assertContains( 'lang', $columns );
 	}
 
@@ -72,6 +73,7 @@ class KKLPMDomainRouterRepositoryTest extends WP_UnitTestCase {
 				'value'   => ' Promo.Example.com:443 ',
 				'page_id' => $page_id,
 				'active'  => 1,
+				'is_canonical' => 1,
 				'lang'    => 'en',
 			)
 		);
@@ -84,6 +86,7 @@ class KKLPMDomainRouterRepositoryTest extends WP_UnitTestCase {
 		$this->assertSame( 'promo.example.com', $mapping['value'] );
 		$this->assertSame( (string) $page_id, $mapping['page_id'] );
 		$this->assertSame( '1', $mapping['active'] );
+		$this->assertSame( '1', $mapping['is_canonical'] );
 		$this->assertSame( 'en', $mapping['lang'] );
 
 		$this->assertTrue(
@@ -94,6 +97,7 @@ class KKLPMDomainRouterRepositoryTest extends WP_UnitTestCase {
 					'value'   => 'campaign/',
 					'page_id' => $page_id,
 					'active'  => 0,
+					'is_canonical' => 0,
 					'lang'    => '',
 				)
 			)
@@ -104,6 +108,7 @@ class KKLPMDomainRouterRepositoryTest extends WP_UnitTestCase {
 		$this->assertSame( 'subpath', $updated_mapping['type'] );
 		$this->assertSame( '/campaign', $updated_mapping['value'] );
 		$this->assertSame( '0', $updated_mapping['active'] );
+		$this->assertSame( '0', $updated_mapping['is_canonical'] );
 		$this->assertNull( $updated_mapping['lang'] );
 
 		$this->assertTrue( KKLPM_Domain_Map_Repository::delete_mapping( $mapping_id ) );
@@ -193,6 +198,47 @@ class KKLPMDomainRouterRepositoryTest extends WP_UnitTestCase {
 		$this->assertCount( 2, $candidates );
 		$this->assertContains( $subdomain_id, $candidate_ids );
 		$this->assertContains( $subpath_id, $candidate_ids );
+	}
+
+	/**
+	 * Ensures the canonical flag remains unique per page after inserts and updates.
+	 *
+	 * @return void
+	 */
+	public function test_repository_keeps_only_one_canonical_mapping_per_page() {
+		$page_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'page',
+				'post_status' => 'publish',
+			)
+		);
+
+		$first_mapping_id = KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'    => 'subdomain',
+				'value'   => 'promo.example.org',
+				'page_id' => $page_id,
+				'active'  => 1,
+				'is_canonical' => 1,
+			)
+		);
+		$second_mapping_id = KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'    => 'external',
+				'value'   => 'landing.example.net',
+				'page_id' => $page_id,
+				'active'  => 1,
+				'is_canonical' => 1,
+			)
+		);
+
+		$first_mapping  = KKLPM_Domain_Map_Repository::get_mapping( $first_mapping_id );
+		$second_mapping = KKLPM_Domain_Map_Repository::get_mapping( $second_mapping_id );
+		$canonical      = KKLPM_Domain_Map_Repository::get_canonical_mapping_for_page( $page_id );
+
+		$this->assertSame( '0', $first_mapping['is_canonical'] );
+		$this->assertSame( '1', $second_mapping['is_canonical'] );
+		$this->assertSame( $second_mapping_id, (int) $canonical['id'] );
 	}
 
 	/**

@@ -690,6 +690,64 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Ensures the isolated template prints a canonical tag directly when wp_head() is disabled.
+	 *
+	 * @return void
+	 */
+	public function test_landing_page_template_outputs_canonical_tag_without_wp_head() {
+		$post = $this->create_page_for_administrator();
+
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'    => 'external',
+				'value'   => 'landing.example.net',
+				'page_id' => $post->ID,
+				'active'  => 1,
+				'is_canonical' => 1,
+			)
+		);
+
+		$markup = $this->render_landing_template( $post );
+
+		$this->assertStringContainsString(
+			'<link rel="canonical" href="http://landing.example.net/" />',
+			$markup
+		);
+	}
+
+	/**
+	 * Ensures the template can emit a fallback canonical via wp_head() when assets are enabled.
+	 *
+	 * @return void
+	 */
+	public function test_landing_page_template_outputs_fallback_canonical_via_wp_head() {
+		$post = $this->create_page_for_administrator();
+		update_post_meta( $post->ID, KKLPM_Landing_Page_Meta::WP_ASSETS, '1' );
+
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'    => 'subpath',
+				'value'   => '/promo',
+				'page_id' => $post->ID,
+				'active'  => 1,
+				'is_canonical' => 0,
+			)
+		);
+
+		remove_action( 'wp_head', 'print_emoji_detection_script', 7 );
+		$this->setExpectedIncorrectUsage( 'wp_maybe_inline_styles' );
+
+		$markup = $this->render_landing_template( $post );
+
+		add_action( 'wp_head', 'print_emoji_detection_script', 7 );
+
+		$this->assertStringContainsString(
+			'<link rel="canonical" href="' . esc_url( get_permalink( $post ) ) . '" />',
+			$markup
+		);
+	}
+
+	/**
 	 * Ensures the template skips wp_head() and wp_footer() when the toggle is disabled.
 	 *
 	 * @return void

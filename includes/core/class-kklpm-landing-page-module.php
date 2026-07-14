@@ -222,7 +222,7 @@ class KKLPM_Landing_Page_Module {
 
 		$wp_assets = get_post_meta( $post_id, KKLPM_Landing_Page_Meta::WP_ASSETS, true );
 
-		if ( '1' !== $theme_header_footer || isset( $_POST['kklpm_landing_wp_assets'] ) ) {
+		if ( '1' !== $theme_header_footer || isset( $_POST['kklpm_landing_wp_assets'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce is verified in can_save_meta_box().
 			$wp_assets_input = isset( $_POST['kklpm_landing_wp_assets'] ) ? sanitize_text_field( wp_unslash( $_POST['kklpm_landing_wp_assets'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce is verified in can_save_meta_box().
 			$wp_assets       = KKLPM_Landing_Page_View::normalize_enabled_value(
 				$wp_assets_input

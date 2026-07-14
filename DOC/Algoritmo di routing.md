@@ -138,7 +138,6 @@ Regole attuali:
 Non c'e` ancora:
 
 - matching avanzato per prefissi o wildcard
-- gestione canonical
 - supporto lingua nella risoluzione runtime
 - logica speciale per `X-Forwarded-Host`
 
@@ -256,6 +255,23 @@ Poi ha due modalita`:
 
 Questa parte non cambia piu` la pagina servita: cambia solo **come viene renderizzata**.
 
+## 10.1 Come viene gestito il canonical URL
+
+Se la pagina corrente ha almeno un mapping attivo nel Domain Router, il plugin prova a emettere anche un canonical URL.
+
+Regole attuali:
+
+- se esiste un mapping attivo marcato come canonico per quella pagina, il canonical punta a quel mapping;
+- se esistono mapping attivi ma nessuno e` marcato come canonico, il plugin usa come fallback il permalink nativo della pagina su `home_url()`;
+- se la pagina non ha mapping attivi, il plugin non emette alcun canonical custom.
+
+Il tag viene emesso in due modi, a seconda del rendering:
+
+- tramite hook `wp_head`, quando il template usa `wp_head()`;
+- direttamente dentro `templates/landing-page.php`, quando il template isolato non carica `wp_head()`.
+
+Questa doppia gestione evita di perdere il canonical nelle landing page piu` isolate.
+
 ## 11. Sequenza completa, passo passo
 
 1. Arriva una richiesta HTTP a WordPress.
@@ -271,13 +287,13 @@ Questa parte non cambia piu` la pagina servita: cambia solo **come viene renderi
 11. WordPress continua la query principale usando quella pagina.
 12. Su `template_include`, il Landing Page Module controlla se la pagina ha la landing attiva.
 13. Se si`, usa `templates/landing-page.php`; altrimenti lascia il template del tema.
-14. Il browser continua a mostrare l'URL originario richiesto.
+14. Se la pagina ha mapping attivi, il plugin prova anche a emettere il canonical corretto.
+15. Il browser continua a mostrare l'URL originario richiesto.
 
 ## 12. Limiti attuali del routing
 
 In questo momento il routing implementato ha questi limiti o gap dichiarati:
 
-- nessuna emissione del canonical URL
 - nessun adapter multilingua attivo nel runtime
 - nessun supporto a wildcard o matching parziale
 - nessuna gestione speciale di proxy / `X-Forwarded-Host`
@@ -289,4 +305,3 @@ Quindi il comportamento attuale e` volutamente semplice:
 - match esatto host/path
 - riscrittura della query verso una pagina WordPress
 - eventuale sostituzione del template in `template_include`
-
