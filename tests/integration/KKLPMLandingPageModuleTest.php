@@ -736,6 +736,7 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 
 		remove_action( 'wp_head', 'print_emoji_detection_script', 7 );
 		$this->setExpectedIncorrectUsage( 'wp_maybe_inline_styles' );
+		$this->go_to( get_permalink( $post ) );
 
 		$markup = $this->render_landing_template( $post );
 
