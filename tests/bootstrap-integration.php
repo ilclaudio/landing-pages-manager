@@ -5,6 +5,10 @@
  * @package LandingPageManager
  */
 
+if ( ! defined( 'KKLPM_RUNNING_TESTS' ) ) {
+	define( 'KKLPM_RUNNING_TESTS', true );
+}
+
 // Get the WordPress tests framework directory.
 $kklpm_tests_dir = getenv( 'WP_TESTS_DIR' );
 
@@ -83,6 +87,51 @@ if ( ! function_exists( 'acf_add_local_field_group' ) ) {
 	 */
 	function acf_add_local_field_group( $field_group ) {
 		unset( $field_group );
+	}
+}
+
+if ( ! function_exists( 'pll_current_language' ) ) {
+	/**
+	 * Minimal pll_current_language() shim for integration tests.
+	 *
+	 * Test classes control the return value via $GLOBALS['kklpm_test_pll_current_language'].
+	 *
+	 * @return string
+	 */
+	function pll_current_language() {
+		return isset( $GLOBALS['kklpm_test_pll_current_language'] ) ? $GLOBALS['kklpm_test_pll_current_language'] : '';
+	}
+}
+
+if ( ! function_exists( 'pll_languages_list' ) ) {
+	/**
+	 * Minimal pll_languages_list() shim for integration tests.
+	 *
+	 * Test classes control the return value via $GLOBALS['kklpm_test_pll_languages_list'].
+	 *
+	 * @return array
+	 */
+	function pll_languages_list() {
+		return isset( $GLOBALS['kklpm_test_pll_languages_list'] ) ? $GLOBALS['kklpm_test_pll_languages_list'] : array();
+	}
+}
+
+if ( ! function_exists( 'pll_get_post' ) ) {
+	/**
+	 * Minimal pll_get_post() shim for integration tests.
+	 *
+	 * Test classes control the translation map via $GLOBALS['kklpm_test_pll_translations'],
+	 * keyed by source post ID, each value a `[ lang => translated_post_id ]` map.
+	 *
+	 * @param int    $post_id Source post ID.
+	 * @param string $lang    Target language code.
+	 * @return int
+	 */
+	function pll_get_post( $post_id, $lang ) {
+		$translations = isset( $GLOBALS['kklpm_test_pll_translations'] ) ? $GLOBALS['kklpm_test_pll_translations'] : array();
+		$map          = isset( $translations[ $post_id ] ) ? $translations[ $post_id ] : array();
+
+		return isset( $map[ $lang ] ) ? (int) $map[ $lang ] : 0;
 	}
 }
 

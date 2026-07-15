@@ -10,7 +10,7 @@ The **Domain Router** lets a landing page be reached through a subdomain, a subp
 
 When the same landing page is reachable through multiple hosts, one mapping can be marked as **canonical**. The plugin then emits a `<link rel="canonical">` tag for that page, while still serving the requested host without redirecting the visitor.
 
-Planned multilingual support follows an **adapter-first** model: if a supported multilingual plugin such as Polylang or WPML is active, KKLPM will resolve the current language and translated landing page through that plugin's adapter. In the standard flow, language selection should not require separate router mappings per language.
+Multilingual support follows an **adapter-first** model: KKLPM ships one adapter per supported plugin (WPML, Polylang, TranslatePress, Weglot, MultilingualPress), each able to detect whether its own plugin is active. At runtime only the adapter matching whichever plugin is actually active on the site is used — the others are simply not selected, not deleted or disabled. If none of them is active, a built-in Null adapter keeps routing behaving exactly as in a single-language site. See [DOC/GestioneMultilingua.md](DOC/GestioneMultilingua.md) for the full behavior (Italian).
 
 ## Requirements
 
@@ -37,7 +37,7 @@ Planned multilingual support follows an **adapter-first** model: if a supported 
 3. Optionally mark one mapping for that page as **canonical** if search engines should treat that host/path as the official URL for the content.
 4. Configure DNS and your web server so requests for that host reach this WordPress installation — the plugin does not automate DNS or virtual host setup.
 
-In the current standard admin flow, the router does not expose a per-mapping language field: multilingual resolution is planned to be adapter-driven, not based on manually creating one route per language.
+In the standard admin flow, the router does not expose a per-mapping language field: multilingual resolution is adapter-driven, not based on manually creating one route per language. A visitor can still request a specific language explicitly, or a landing page can offer a manual language switcher, via the `?kklpm_lang=xx` parameter — see [DOC/GestioneMultilingua.md](DOC/GestioneMultilingua.md) for the pattern.
 
 ## Permissions
 

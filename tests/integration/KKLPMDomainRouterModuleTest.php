@@ -26,7 +26,7 @@ class KKLPMDomainRouterModuleTest extends WP_UnitTestCase {
 		parent::set_up();
 		KKLPM_Domain_Map_Repository::create_table();
 		$this->truncate_domain_map_table();
-		$this->module = new KKLPM_Domain_Router_Module();
+		$this->module = new KKLPM_Domain_Router_Module_Test_Double();
 		$_SERVER['HTTP_HOST'] = 'example.org';
 	}
 
@@ -124,6 +124,35 @@ class KKLPMDomainRouterModuleTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Ensures non-landing mapped pages still route, but emit a warning log entry.
+	 *
+	 * @return void
+	 */
+	public function test_parse_request_routes_non_landing_mapping_and_logs_warning() {
+		$page_id = $this->create_published_page( 'theme-page' );
+
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'    => 'subpath',
+				'value'   => '/theme-page-route',
+				'page_id' => $page_id,
+				'active'  => 1,
+			)
+		);
+
+		$wp = new WP();
+		$wp->request = 'theme-page-route';
+
+		$this->module->handle_parse_request( $wp );
+
+		$this->assertSame( $page_id, (int) $wp->query_vars['page_id'] );
+		$this->assertSame( 'theme-page', $wp->query_vars['pagename'] );
+		$this->assertCount( 1, $this->module->warning_messages );
+		$this->assertStringContainsString( 'landing page mode is disabled', $this->module->warning_messages[0] );
+		$this->assertStringContainsString( 'theme-page-route', $this->module->warning_messages[0] );
+	}
+
+	/**
 	 * Ensures inactive mappings do not hijack normal requests.
 	 *
 	 * @return void
@@ -192,6 +221,9 @@ class KKLPMDomainRouterModuleTest extends WP_UnitTestCase {
 
 		$this->assertArrayNotHasKey( 'page_id', $wp->query_vars );
 		$this->assertSame( 'normal-page', $wp->query_vars['pagename'] );
+		$this->assertEmpty( $wp->matched_rule );
+		$this->assertEmpty( $wp->matched_query );
+		$this->assertEmpty( $wp->did_permalink );
 		$this->assertNotEmpty( $page_id );
 	}
 
@@ -294,5 +326,37 @@ class KKLPMDomainRouterModuleTest extends WP_UnitTestCase {
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->query( "DELETE FROM {$table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+}
+
+/**
+ * Test double that captures warning log messages instead of writing to PHP logs.
+ */
+class KKLPM_Domain_Router_Module_Test_Double extends KKLPM_Domain_Router_Module {
+
+	/**
+	 * Captured warning messages.
+	 *
+	 * @var string[]
+	 */
+	public $warning_messages = array();
+
+	/**
+	 * Always enable warning logging during integration tests.
+	 *
+	 * @return bool
+	 */
+	protected function should_log_non_landing_mapping_warning() {
+		return true;
+	}
+
+	/**
+	 * Captures warning messages for assertions.
+	 *
+	 * @param string $message Warning message.
+	 * @return void
+	 */
+	protected function write_warning_log( $message ) {
+		$this->warning_messages[] = (string) $message;
 	}
 }

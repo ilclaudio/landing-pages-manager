@@ -133,6 +133,29 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Ensures an enabled landing page uses the plugin template even without any router mapping.
+	 *
+	 * @return void
+	 */
+	public function test_template_include_returns_plugin_template_for_enabled_unmapped_page() {
+		$page_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'page',
+				'post_status' => 'publish',
+				'post_name'   => 'standalone-landing',
+			)
+		);
+
+		update_post_meta( $page_id, KKLPM_Landing_Page_Meta::ENABLED, '1' );
+
+		$this->go_to( get_permalink( $page_id ) );
+
+		$resolved_template = $this->module->filter_template_include( 'theme-page.php' );
+
+		$this->assertSame( KKLPM_PLUGIN_DIR . 'templates/landing-page.php', $resolved_template );
+	}
+
+	/**
 	 * Ensures the original template remains when the landing page is disabled.
 	 *
 	 * @return void

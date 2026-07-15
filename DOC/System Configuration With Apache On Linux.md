@@ -157,7 +157,7 @@ If the same page is reachable through multiple mappings, mark one of them as can
 Expected:
 
 - the page is still served on the requested host/path, with no redirect;
-- the HTML contains a single `<link rel="canonical">`;
+- the HTML contains a canonical `<link rel="canonical">` tag emitted by the plugin for that page;
 - that tag points to the mapping marked as canonical.
 
 ### Inactive mapping

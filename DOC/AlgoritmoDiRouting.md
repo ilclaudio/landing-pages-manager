@@ -138,7 +138,6 @@ Regole attuali:
 Non c'e` ancora:
 
 - matching avanzato per prefissi o wildcard
-- supporto lingua nella risoluzione runtime
 - logica speciale per `X-Forwarded-Host`
 
 ## 6. Cosa succede dopo un match
@@ -294,7 +293,6 @@ Questa doppia gestione evita di perdere il canonical nelle landing page piu` iso
 
 In questo momento il routing implementato ha questi limiti o gap dichiarati:
 
-- nessun adapter multilingua attivo nel runtime
 - nessun supporto a wildcard o matching parziale
 - nessuna gestione speciale di proxy / `X-Forwarded-Host`
 - nessuna cache dedicata per host/lingua
@@ -303,24 +301,31 @@ Quindi il comportamento attuale e` volutamente semplice:
 
 - hook precoce su `parse_request`
 - match esatto host/path
+- risoluzione della pagina tradotta tramite l'adapter multilingua attivo, quando ne esiste uno (vedi sezione 13)
 - riscrittura della query verso una pagina WordPress
 - eventuale sostituzione del template in `template_include`
 
-## 13. Direzione prevista per il multilingua
+## 13. Come viene gestito il multilingua (Step 3)
 
-Per l'evoluzione Step 3, la direzione architetturale prevista non e` "un mapping per ogni lingua" come flusso standard.
+Il router non usa "un mapping per ogni lingua" come flusso standard. Dopo aver risolto `host/path -> pagina sorgente` (sezioni 5-6), `KKLPM_Domain_Router_Module::resolve_translated_page_id()` chiede all'adapter multilingua attivo se esiste una traduzione:
 
-L'idea e` questa:
+- se e` attivo un plugin supportato (WPML, Polylang, TranslatePress, Weglot o MultilingualPress), `KKLPM_Language_Adapter_Resolver` restituisce l'adapter corrispondente, che risolve lingua corrente e pagina tradotta;
+- se non e` attivo nessun plugin multilingua, il `Null adapter` lascia invariato il comportamento del router (nessuna risoluzione aggiuntiva, resta sulla pagina sorgente);
+- se l'adapter attivo non trova nessuna traduzione per la lingua corrente, il router resta comunque sulla pagina sorgente invece di fallire.
 
-- il router continua a risolvere `host/path -> pagina sorgente`
-- se e` attivo un plugin supportato (per esempio Polylang o WPML), un adapter interno risolve:
-  - lingua corrente
-  - pagina tradotta corrispondente
-- se non e` attivo nessun plugin multilingua, il `Null adapter` lascia invariato il comportamento attuale del plugin
+Di conseguenza:
 
-Quindi, nello scenario standard futuro:
+- il multilingua e` **adapter-first**: nessun mapping separato per lingua nel caso standard;
+- il campo `lang` del router non viene letto a runtime da nessuna parte;
+- il backoffice standard del Domain Router non espone il campo `lang` nel form di insert/edit;
+- la colonna `lang` resta solo compatibilita` tecnica per valori storici.
 
-- il multilingua sara` **adapter-first**
-- il campo `lang` del router non dovrebbe servire come configurazione obbligatoria
-- per coerenza, il backoffice standard del Domain Router non espone piu` il campo `lang` nel form di insert/edit
-- l'eventuale colonna `lang` resta, per ora, una compatibilita` tecnica o una leva avanzata da rivalutare solo se emergera` un caso d'uso reale
+Un visitatore puo` anche forzare esplicitamente una lingua per una richiesta mappata con il parametro `?kklpm_lang=xx`, con precedenza sulla lingua rilevata dall'adapter.
+
+Dettagli completi (adapter concreti, criteri di rilevamento, esempio pratico, parametro `kklpm_lang`) in `DOC/GestioneMultilingua.md`.
+
+## 14. Conflitto con il canonical redirect di Polylang (risolto)
+
+Polylang ha un proprio meccanismo di canonical redirect, indipendente dal Domain Router, che gira su `template_redirect` **dopo** che il router ha gia` risolto la pagina. Confronta l'URL richiesta con quella che *lui* considera corretta per la lingua della pagina risolta, e puo` reindirizzare con 301. Le URL sintetiche del Domain Router (es. `/promo-lpmanager`) non corrispondono mai a un permalink nativo di Polylang, quindi questo controllo poteva reindirizzare verso un path con prefisso di lingua (es. `/it/promo-lpmanager/`) che non corrisponde a nessun mapping — causando un 404 al posto della pagina tradotta.
+
+Il router sopprime ora questo specifico redirect per le richieste che ha gia` gestito lui stesso (tramite `KKLPM_Language_Adapter_Polylang::register()`), lasciando invariato il comportamento di Polylang per qualunque altra richiesta del sito. Dettagli completi in `DOC/GestioneMultilingua.md`.

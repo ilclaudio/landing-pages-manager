@@ -87,7 +87,103 @@ class KKLPM_Domain_Router_Module {
 			return false;
 		}
 
-		return $page_id;
+		$this->maybe_log_non_landing_mapping_warning( $match, $page_id, $host, $normalized_path );
+
+		return $this->resolve_translated_page_id( $page_id );
+	}
+
+	/**
+	 * Logs a warning when a mapping targets a page without landing mode enabled.
+	 *
+	 * @param array  $matched_mapping Matched mapping row.
+	 * @param int    $page_id         Matched page ID.
+	 * @param string $host            Request host.
+	 * @param string $normalized_path Normalized request path.
+	 * @return void
+	 */
+	protected function maybe_log_non_landing_mapping_warning( array $matched_mapping, $page_id, $host, $normalized_path ) {
+		if ( ! $this->should_log_non_landing_mapping_warning() || KKLPM_Landing_Page_Meta::is_enabled( $page_id ) ) {
+			return;
+		}
+
+		$this->write_warning_log(
+			sprintf(
+				'KKLPM warning: matched mapping "%1$s:%2$s" to page %3$d, but landing page mode is disabled for that page. Request host="%4$s" path="%5$s".',
+				isset( $matched_mapping['type'] ) ? (string) $matched_mapping['type'] : '',
+				isset( $matched_mapping['value'] ) ? (string) $matched_mapping['value'] : '',
+				(int) $page_id,
+				(string) $host,
+				(string) $normalized_path
+			)
+		);
+	}
+
+	/**
+	 * Whether non-landing mapping warnings should be written to the PHP log.
+	 *
+	 * @return bool
+	 */
+	protected function should_log_non_landing_mapping_warning() {
+		if ( defined( 'KKLPM_RUNNING_TESTS' ) && KKLPM_RUNNING_TESTS ) {
+			return false;
+		}
+
+		return defined( 'WP_DEBUG' ) && WP_DEBUG;
+	}
+
+	/**
+	 * Writes a warning message to the PHP error log.
+	 *
+	 * @param string $message Warning message.
+	 * @return void
+	 */
+	protected function write_warning_log( $message ) {
+		error_log( (string) $message ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional debug warning for misconfigured mapped pages when WP_DEBUG is enabled.
+	}
+
+	/**
+	 * Resolves the translated page ID for the current language, when available.
+	 *
+	 * Falls back to the source page ID when no multilingual plugin is active,
+	 * or when the active adapter has no translation for the current language.
+	 *
+	 * @param int $page_id Source page ID matched by the router.
+	 * @return int
+	 */
+	protected function resolve_translated_page_id( $page_id ) {
+		$adapter = KKLPM_Language_Adapter_Resolver::get_active_adapter();
+		$lang    = $this->get_language_override();
+
+		if ( null === $lang ) {
+			$lang = $adapter->get_current_language();
+		}
+
+		if ( null === $lang ) {
+			return $page_id;
+		}
+
+		$translated_id = $adapter->get_translated_page_id( $page_id, $lang );
+
+		return null !== $translated_id ? $translated_id : $page_id;
+	}
+
+	/**
+	 * Reads an explicit visitor-requested language override, when present.
+	 *
+	 * Lets a visitor pick a specific language for a mapped request (e.g. via a
+	 * manually authored switcher link or a direct link) instead of relying on
+	 * the active adapter's own current-language detection.
+	 *
+	 * @return string|null
+	 */
+	protected function get_language_override() {
+		if ( empty( $_GET['kklpm_lang'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only language selector, not a state-changing action.
+			return null;
+		}
+
+		$override = sanitize_text_field( wp_unslash( $_GET['kklpm_lang'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only language selector, not a state-changing action.
+
+		return '' !== $override ? $override : null;
 	}
 
 	/**

@@ -30,6 +30,14 @@ require_once KKLPM_PLUGIN_DIR . 'includes/domain-router/class-kklpm-domain-map-r
 require_once KKLPM_PLUGIN_DIR . 'includes/domain-router/class-kklpm-domain-router-matcher.php';
 require_once KKLPM_PLUGIN_DIR . 'includes/domain-router/class-kklpm-domain-router-module.php';
 require_once KKLPM_PLUGIN_DIR . 'includes/domain-router/class-kklpm-domain-router-admin-page.php';
+require_once KKLPM_PLUGIN_DIR . 'includes/language-adapters/interface-kklpm-language-adapter.php';
+require_once KKLPM_PLUGIN_DIR . 'includes/language-adapters/class-kklpm-language-adapter-null.php';
+require_once KKLPM_PLUGIN_DIR . 'includes/language-adapters/class-kklpm-language-adapter-wpml.php';
+require_once KKLPM_PLUGIN_DIR . 'includes/language-adapters/class-kklpm-language-adapter-polylang.php';
+require_once KKLPM_PLUGIN_DIR . 'includes/language-adapters/class-kklpm-language-adapter-translatepress.php';
+require_once KKLPM_PLUGIN_DIR . 'includes/language-adapters/class-kklpm-language-adapter-weglot.php';
+require_once KKLPM_PLUGIN_DIR . 'includes/language-adapters/class-kklpm-language-adapter-multilingualpress.php';
+require_once KKLPM_PLUGIN_DIR . 'includes/language-adapters/class-kklpm-language-adapter-resolver.php';
 
 register_activation_hook( __FILE__, array( 'KKLPM_Plugin', 'activate' ) );
 
