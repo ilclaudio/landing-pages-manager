@@ -116,6 +116,19 @@ if ( ! function_exists( 'pll_languages_list' ) ) {
 	}
 }
 
+if ( ! function_exists( 'pll_default_language' ) ) {
+	/**
+	 * Minimal pll_default_language() shim for integration tests.
+	 *
+	 * Test classes control the return value via $GLOBALS['kklpm_test_pll_default_language'].
+	 *
+	 * @return string
+	 */
+	function pll_default_language() {
+		return isset( $GLOBALS['kklpm_test_pll_default_language'] ) ? $GLOBALS['kklpm_test_pll_default_language'] : '';
+	}
+}
+
 if ( ! function_exists( 'pll_get_post' ) ) {
 	/**
 	 * Minimal pll_get_post() shim for integration tests.

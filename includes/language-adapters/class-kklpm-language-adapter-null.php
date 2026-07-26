@@ -49,4 +49,14 @@ class KKLPM_Language_Adapter_Null implements KKLPM_Language_Adapter_Interface {
 	public function get_translated_page_id( $page_id, $lang ) {
 		return (int) $page_id;
 	}
+
+	/**
+	 * No multilingual plugin means no page is ever a translation of another.
+	 *
+	 * @param int $page_id Page ID, possibly a translation.
+	 * @return null
+	 */
+	public function get_source_page_id( $page_id ) {
+		return null;
+	}
 }

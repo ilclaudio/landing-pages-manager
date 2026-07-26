@@ -108,6 +108,7 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 		unset( $GLOBALS['kklpm_test_pll_current_language'] );
 		unset( $GLOBALS['kklpm_test_pll_languages_list'] );
 		unset( $GLOBALS['kklpm_test_pll_translations'] );
+		unset( $GLOBALS['kklpm_test_pll_default_language'] );
 		KKLPM_Language_Adapter_Resolver::reset();
 		$_POST = array();
 		wp_set_current_user( 0 );
@@ -175,6 +176,62 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 		update_post_meta( $page_id, KKLPM_Landing_Page_Meta::ENABLED, '0' );
 
 		$this->go_to( get_permalink( $page_id ) );
+
+		$resolved_template = $this->module->filter_template_include( 'theme-page.php' );
+
+		$this->assertSame( 'theme-page.php', $resolved_template );
+	}
+
+	/**
+	 * Ensures a translation visited directly via its own native permalink
+	 * (no Domain Router involved) still uses the plugin template when it has
+	 * never configured landing mode itself but its default-language source
+	 * page is enabled — the "silently falls back to the theme" bug.
+	 *
+	 * @return void
+	 */
+	public function test_template_include_returns_plugin_template_for_translation_inheriting_enabled_from_source() {
+		KKLPM_Language_Adapter_Resolver::reset();
+
+		$source_id     = self::factory()->post->create( array( 'post_type' => 'page' ) );
+		$translated_id = self::factory()->post->create( array( 'post_type' => 'page' ) );
+
+		update_post_meta( $source_id, KKLPM_Landing_Page_Meta::ENABLED, '1' );
+
+		$GLOBALS['kklpm_test_pll_default_language'] = 'en';
+		$GLOBALS['kklpm_test_pll_translations']      = array(
+			$translated_id => array( 'en' => $source_id ),
+		);
+
+		$this->go_to( get_permalink( $translated_id ) );
+
+		$resolved_template = $this->module->filter_template_include( 'theme-page.php' );
+
+		$this->assertSame( KKLPM_PLUGIN_DIR . 'templates/landing-page.php', $resolved_template );
+	}
+
+	/**
+	 * Ensures an editor can explicitly opt a translation out of landing mode
+	 * even when its source page is enabled — an explicit save always wins
+	 * over inheritance.
+	 *
+	 * @return void
+	 */
+	public function test_template_include_keeps_original_template_when_translation_explicitly_disabled_despite_enabled_source() {
+		KKLPM_Language_Adapter_Resolver::reset();
+
+		$source_id     = self::factory()->post->create( array( 'post_type' => 'page' ) );
+		$translated_id = self::factory()->post->create( array( 'post_type' => 'page' ) );
+
+		update_post_meta( $source_id, KKLPM_Landing_Page_Meta::ENABLED, '1' );
+		update_post_meta( $translated_id, KKLPM_Landing_Page_Meta::ENABLED, '0' );
+
+		$GLOBALS['kklpm_test_pll_default_language'] = 'en';
+		$GLOBALS['kklpm_test_pll_translations']      = array(
+			$translated_id => array( 'en' => $source_id ),
+		);
+
+		$this->go_to( get_permalink( $translated_id ) );
 
 		$resolved_template = $this->module->filter_template_include( 'theme-page.php' );
 

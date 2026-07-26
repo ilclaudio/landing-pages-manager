@@ -70,4 +70,33 @@ class KKLPM_Language_Adapter_WPML implements KKLPM_Language_Adapter_Interface {
 
 		return is_numeric( $translated_id ) && (int) $translated_id > 0 ? (int) $translated_id : null;
 	}
+
+	/**
+	 * Default-language source page ID via the `wpml_default_language` and
+	 * `wpml_object_id` filters.
+	 *
+	 * @param int $page_id Page ID, possibly a translation.
+	 * @return int|null
+	 */
+	public function get_source_page_id( $page_id ) {
+		if ( ! $this->is_active() || ! function_exists( 'apply_filters' ) ) {
+			return null;
+		}
+
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party filter defined by WPML itself.
+		$default_lang = apply_filters( 'wpml_default_language', null );
+
+		if ( ! is_string( $default_lang ) || '' === $default_lang ) {
+			return null;
+		}
+
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Third-party filter defined by WPML itself.
+		$source_id = apply_filters( 'wpml_object_id', (int) $page_id, 'page', false, $default_lang );
+
+		if ( ! is_numeric( $source_id ) || (int) $source_id <= 0 || (int) $source_id === (int) $page_id ) {
+			return null;
+		}
+
+		return (int) $source_id;
+	}
 }

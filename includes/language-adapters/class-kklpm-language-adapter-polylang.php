@@ -99,4 +99,30 @@ class KKLPM_Language_Adapter_Polylang implements KKLPM_Language_Adapter_Interfac
 
 		return is_numeric( $translated_id ) && (int) $translated_id > 0 ? (int) $translated_id : null;
 	}
+
+	/**
+	 * Default-language source page ID via `pll_get_post()`.
+	 *
+	 * @param int $page_id Page ID, possibly a translation.
+	 * @return int|null
+	 */
+	public function get_source_page_id( $page_id ) {
+		if ( ! function_exists( 'pll_default_language' ) || ! function_exists( 'pll_get_post' ) ) {
+			return null;
+		}
+
+		$default_language = pll_default_language();
+
+		if ( ! is_string( $default_language ) || '' === $default_language ) {
+			return null;
+		}
+
+		$source_id = pll_get_post( (int) $page_id, $default_language );
+
+		if ( ! is_numeric( $source_id ) || (int) $source_id <= 0 || (int) $source_id === (int) $page_id ) {
+			return null;
+		}
+
+		return (int) $source_id;
+	}
 }

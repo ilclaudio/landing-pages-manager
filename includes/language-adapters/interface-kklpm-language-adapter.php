@@ -41,4 +41,17 @@ interface KKLPM_Language_Adapter_Interface {
 	 * @return int|null
 	 */
 	public function get_translated_page_id( $page_id, $lang );
+
+	/**
+	 * Resolves the default-language source page ID for a translated page.
+	 *
+	 * Inverse of get_translated_page_id(): given a page, returns the ID of
+	 * the default-language page it is a translation of, or null when the
+	 * page is not a translation (including when it already is the
+	 * default-language page itself).
+	 *
+	 * @param int $page_id Page ID, possibly a translation.
+	 * @return int|null
+	 */
+	public function get_source_page_id( $page_id );
 }

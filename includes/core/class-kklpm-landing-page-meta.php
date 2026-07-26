@@ -57,11 +57,25 @@ class KKLPM_Landing_Page_Meta {
 	/**
 	 * Whether the landing page is enabled for a post.
 	 *
+	 * When this page has never had the flag saved explicitly (e.g. a
+	 * translation just created by a multilingual plugin, never opened in
+	 * the Landing Page meta box), it inherits the value from the
+	 * default-language source page instead of defaulting to disabled — a
+	 * translation of an enabled landing page is a landing page too until an
+	 * editor explicitly says otherwise. Any explicit save (even leaving the
+	 * checkbox unchecked) writes a real value and stops the inheritance.
+	 *
 	 * @param int $post_id Post ID.
 	 * @return bool
 	 */
 	public static function is_enabled( $post_id ) {
-		return '1' === get_post_meta( $post_id, self::ENABLED, true );
+		if ( metadata_exists( 'post', $post_id, self::ENABLED ) ) {
+			return '1' === get_post_meta( $post_id, self::ENABLED, true );
+		}
+
+		$source_page_id = KKLPM_Language_Adapter_Resolver::get_active_adapter()->get_source_page_id( (int) $post_id );
+
+		return null !== $source_page_id && '1' === get_post_meta( $source_page_id, self::ENABLED, true );
 	}
 
 	/**
@@ -98,8 +112,10 @@ class KKLPM_Landing_Page_Meta {
 	/**
 	 * Returns translation targets that are not ready to serve as landing pages.
 	 *
-	 * The source page remains the authoritative routing target; every translated
-	 * page must opt into landing mode on its own before the router should use it.
+	 * Since is_enabled() now inherits from the default-language source page
+	 * for translations that have never been saved explicitly, this only
+	 * flags translations that are genuinely not usable: missing/invalid
+	 * pages, or ones an editor explicitly disabled despite an enabled source.
 	 *
 	 * @param int $page_id Source page ID.
 	 * @return array[]

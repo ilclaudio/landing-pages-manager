@@ -245,8 +245,51 @@ class KKLPMLanguageAdapterRoutingTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Ensures a translated page is used only when that translated page is
-	 * itself configured as an enabled landing page.
+	 * Ensures a translation that has never explicitly configured landing
+	 * mode inherits it from the enabled source page, so the router serves
+	 * the translated content instead of silently falling back to the
+	 * source page.
+	 *
+	 * @return void
+	 */
+	public function test_router_uses_translation_when_landing_enabled_is_inherited_from_source() {
+		$source_id     = $this->create_published_page( 'promo-page' );
+		$translated_id = $this->create_published_page( 'promo-page-fr' );
+
+		update_post_meta( $source_id, KKLPM_Landing_Page_Meta::ENABLED, '1' );
+
+		KKLPM_Test_Fake_Language_Adapter::$current_language = 'fr';
+		KKLPM_Test_Fake_Language_Adapter::$translations      = array( $source_id => $translated_id );
+		KKLPM_Test_Fake_Language_Adapter::$source_pages      = array( $translated_id => $source_id );
+
+		add_filter(
+			'kklpm_language_adapter_priority',
+			function () {
+				return array( 'KKLPM_Test_Fake_Language_Adapter' );
+			}
+		);
+
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'    => 'subpath',
+				'value'   => '/promo',
+				'page_id' => $source_id,
+				'active'  => 1,
+			)
+		);
+
+		$wp          = new WP();
+		$wp->request = 'promo';
+
+		$this->module->handle_parse_request( $wp );
+
+		$this->assertSame( $translated_id, (int) $wp->query_vars['page_id'] );
+	}
+
+	/**
+	 * Ensures a translation that never inherited landing mode (the fake
+	 * adapter reports no source page for it) still falls back to the source
+	 * page, exactly as before this feature existed.
 	 *
 	 * @return void
 	 */
@@ -334,6 +377,13 @@ class KKLPM_Test_Fake_Language_Adapter implements KKLPM_Language_Adapter_Interfa
 	public static $translations = array();
 
 	/**
+	 * Source-page map: `[ translated_page_id => source_page_id ]`.
+	 *
+	 * @var array
+	 */
+	public static $source_pages = array();
+
+	/**
 	 * Always active: this is a deliberately selected test double.
 	 *
 	 * @return bool
@@ -379,5 +429,15 @@ class KKLPM_Test_Fake_Language_Adapter implements KKLPM_Language_Adapter_Interfa
 		}
 
 		return (int) $mapped;
+	}
+
+	/**
+	 * Returns the configured source page for a translated page, if any.
+	 *
+	 * @param int $page_id Page ID, possibly a translation.
+	 * @return int|null
+	 */
+	public function get_source_page_id( $page_id ) {
+		return isset( self::$source_pages[ $page_id ] ) ? (int) self::$source_pages[ $page_id ] : null;
 	}
 }

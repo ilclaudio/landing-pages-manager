@@ -108,6 +108,60 @@ class KKLPMLanguageAdapterPolylangTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Ensures the adapter resolves the default-language source page ID for a translation.
+	 *
+	 * @return void
+	 */
+	public function test_adapter_resolves_source_page_id() {
+		$source_id     = self::factory()->post->create( array( 'post_type' => 'page' ) );
+		$translated_id = self::factory()->post->create( array( 'post_type' => 'page' ) );
+
+		$GLOBALS['kklpm_test_pll_default_language'] = 'en';
+		$GLOBALS['kklpm_test_pll_translations']      = array(
+			$translated_id => array( 'en' => $source_id ),
+		);
+
+		$adapter = new KKLPM_Language_Adapter_Polylang();
+
+		$this->assertSame( $source_id, $adapter->get_source_page_id( $translated_id ) );
+	}
+
+	/**
+	 * Ensures the adapter returns null when the page is the default-language
+	 * page itself, i.e. there is no different source page to inherit from.
+	 *
+	 * @return void
+	 */
+	public function test_adapter_returns_null_for_source_page_id_when_page_is_already_the_source() {
+		$source_id = self::factory()->post->create( array( 'post_type' => 'page' ) );
+
+		$GLOBALS['kklpm_test_pll_default_language'] = 'en';
+		$GLOBALS['kklpm_test_pll_translations']      = array(
+			$source_id => array( 'en' => $source_id ),
+		);
+
+		$adapter = new KKLPM_Language_Adapter_Polylang();
+
+		$this->assertNull( $adapter->get_source_page_id( $source_id ) );
+	}
+
+	/**
+	 * Ensures the adapter returns null when there is no default-language
+	 * translation registered for the page at all.
+	 *
+	 * @return void
+	 */
+	public function test_adapter_returns_null_for_source_page_id_without_a_default_language_translation() {
+		$translated_id = self::factory()->post->create( array( 'post_type' => 'page' ) );
+
+		$GLOBALS['kklpm_test_pll_default_language'] = 'en';
+
+		$adapter = new KKLPM_Language_Adapter_Polylang();
+
+		$this->assertNull( $adapter->get_source_page_id( $translated_id ) );
+	}
+
+	/**
 	 * Ensures `register()` hooks Polylang's own canonical-redirect filter.
 	 *
 	 * @return void
@@ -161,5 +215,6 @@ class KKLPMLanguageAdapterPolylangTest extends WP_UnitTestCase {
 		unset( $GLOBALS['kklpm_test_pll_current_language'] );
 		unset( $GLOBALS['kklpm_test_pll_languages_list'] );
 		unset( $GLOBALS['kklpm_test_pll_translations'] );
+		unset( $GLOBALS['kklpm_test_pll_default_language'] );
 	}
 }

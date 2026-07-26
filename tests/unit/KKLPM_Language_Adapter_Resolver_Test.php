@@ -59,6 +59,7 @@ class KKLPM_Language_Adapter_Resolver_Test extends TestCase {
 		$this->assertNull( $adapter->get_current_language() );
 		$this->assertSame( array(), $adapter->get_available_languages() );
 		$this->assertSame( 42, $adapter->get_translated_page_id( 42, 'it' ) );
+		$this->assertNull( $adapter->get_source_page_id( 42 ) );
 	}
 
 	/**
@@ -87,5 +88,6 @@ class KKLPM_Language_Adapter_Resolver_Test extends TestCase {
 		$this->assertNull( $adapter->get_current_language() );
 		$this->assertSame( array(), $adapter->get_available_languages() );
 		$this->assertNull( $adapter->get_translated_page_id( 42, 'it' ) );
+		$this->assertNull( $adapter->get_source_page_id( 42 ) );
 	}
 }

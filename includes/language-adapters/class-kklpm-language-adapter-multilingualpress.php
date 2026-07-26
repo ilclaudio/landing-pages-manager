@@ -89,6 +89,25 @@ class KKLPM_Language_Adapter_MultilingualPress implements KKLPM_Language_Adapter
 	}
 
 	/**
+	 * Deliberately not implemented: always returns null.
+	 *
+	 * A correct implementation would need to resolve which linked post
+	 * belongs to the network's "source" site and confirm that post's ID
+	 * actually belongs to the site being queried — exactly the cross-site ID
+	 * handling already tracked as open High-severity issues for this
+	 * adapter. Implementing this now would apply the same unverified
+	 * raw-ID-as-current-site assumption to a new code path instead of fixing
+	 * the existing one, so it stays unimplemented until those issues are
+	 * addressed.
+	 *
+	 * @param int $page_id Page ID, possibly a translation.
+	 * @return null
+	 */
+	public function get_source_page_id( $page_id ) {
+		return null;
+	}
+
+	/**
 	 * Reads a site's locale, falling back to the current site's language.
 	 *
 	 * @param int $site_id Site ID.

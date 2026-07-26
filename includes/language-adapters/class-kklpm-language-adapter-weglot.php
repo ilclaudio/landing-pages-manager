@@ -69,4 +69,17 @@ class KKLPM_Language_Adapter_Weglot implements KKLPM_Language_Adapter_Interface 
 	public function get_translated_page_id( $page_id, $lang ) {
 		return $this->is_active() ? (int) $page_id : null;
 	}
+
+	/**
+	 * Identity model: there is no separate page to inherit from.
+	 *
+	 * Weglot serves the same physical page for every language, so a page is
+	 * never "a translation of" a different page.
+	 *
+	 * @param int $page_id Page ID, possibly a translation.
+	 * @return null
+	 */
+	public function get_source_page_id( $page_id ) {
+		return null;
+	}
 }
