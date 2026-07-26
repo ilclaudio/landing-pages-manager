@@ -89,6 +89,8 @@ class KKLPMLanguageAdapterRoutingTest extends WP_UnitTestCase {
 		$source_id     = $this->create_published_page( 'promo-page' );
 		$translated_id = $this->create_published_page( 'promo-page-fr' );
 
+		update_post_meta( $translated_id, KKLPM_Landing_Page_Meta::ENABLED, '1' );
+
 		KKLPM_Test_Fake_Language_Adapter::$current_language = 'fr';
 		KKLPM_Test_Fake_Language_Adapter::$translations      = array( $source_id => $translated_id );
 
@@ -163,6 +165,9 @@ class KKLPMLanguageAdapterRoutingTest extends WP_UnitTestCase {
 		$fr_id     = $this->create_published_page( 'promo-page-fr' );
 		$it_id     = $this->create_published_page( 'promo-page-it' );
 
+		update_post_meta( $fr_id, KKLPM_Landing_Page_Meta::ENABLED, '1' );
+		update_post_meta( $it_id, KKLPM_Landing_Page_Meta::ENABLED, '1' );
+
 		KKLPM_Test_Fake_Language_Adapter::$current_language = 'fr';
 		KKLPM_Test_Fake_Language_Adapter::$translations      = array(
 			$source_id => array(
@@ -230,6 +235,43 @@ class KKLPMLanguageAdapterRoutingTest extends WP_UnitTestCase {
 		);
 
 		$_GET['kklpm_lang'] = 'xx';
+
+		$wp          = new WP();
+		$wp->request = 'promo';
+
+		$this->module->handle_parse_request( $wp );
+
+		$this->assertSame( $source_id, (int) $wp->query_vars['page_id'] );
+	}
+
+	/**
+	 * Ensures a translated page is used only when that translated page is
+	 * itself configured as an enabled landing page.
+	 *
+	 * @return void
+	 */
+	public function test_router_falls_back_to_source_page_when_translation_is_not_a_landing_page() {
+		$source_id     = $this->create_published_page( 'promo-page' );
+		$translated_id = $this->create_published_page( 'promo-page-fr' );
+
+		KKLPM_Test_Fake_Language_Adapter::$current_language = 'fr';
+		KKLPM_Test_Fake_Language_Adapter::$translations      = array( $source_id => $translated_id );
+
+		add_filter(
+			'kklpm_language_adapter_priority',
+			function () {
+				return array( 'KKLPM_Test_Fake_Language_Adapter' );
+			}
+		);
+
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'    => 'subpath',
+				'value'   => '/promo',
+				'page_id' => $source_id,
+				'active'  => 1,
+			)
+		);
 
 		$wp          = new WP();
 		$wp->request = 'promo';

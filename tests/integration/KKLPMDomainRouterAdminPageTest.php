@@ -46,6 +46,10 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 	public function tear_down() {
 		$this->truncate_domain_map_table();
 		wp_set_current_user( 0 );
+		unset( $GLOBALS['kklpm_test_pll_current_language'] );
+		unset( $GLOBALS['kklpm_test_pll_languages_list'] );
+		unset( $GLOBALS['kklpm_test_pll_translations'] );
+		KKLPM_Language_Adapter_Resolver::reset();
 		$_GET  = array();
 		$_POST = array();
 		parent::tear_down();
@@ -398,6 +402,41 @@ class KKLPMDomainRouterAdminPageTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'data-link="' . esc_url( home_url( '/promo' ) ) . '"', $markup );
 		$this->assertStringContainsString( 'data-link="http://promo.example.com/"', $markup );
 		$this->assertStringContainsString( 'data-link="http://www.example.org/"', $markup );
+	}
+
+	/**
+	 * Ensures the admin page warns when a mapped source page has translations without landing enabled.
+	 *
+	 * @return void
+	 */
+	public function test_render_page_warns_about_translation_landing_gaps() {
+		$page_id       = $this->create_published_page( 'mapped-source' );
+		$translated_id = $this->create_published_page( 'mapped-source-it' );
+
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'    => 'subpath',
+				'value'   => '/promo',
+				'page_id' => $page_id,
+				'active'  => 1,
+			)
+		);
+
+		$GLOBALS['kklpm_test_pll_languages_list']   = array( 'it' );
+		$GLOBALS['kklpm_test_pll_translations']     = array(
+			$page_id => array(
+				'it' => $translated_id,
+			),
+		);
+		$GLOBALS['kklpm_test_pll_current_language'] = 'en';
+		KKLPM_Language_Adapter_Resolver::reset();
+
+		ob_start();
+		$this->admin_page->render_page();
+		$markup = (string) ob_get_clean();
+
+		$this->assertStringContainsString( 'Some mapped pages have translations that are not ready as landing pages yet.', $markup );
+		$this->assertStringContainsString( 'Mapped Source (#' . $page_id . '): IT -&gt; Mapped Source It (#' . $translated_id . ') has Landing Page disabled', $markup );
 	}
 
 	/**

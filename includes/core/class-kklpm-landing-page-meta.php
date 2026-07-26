@@ -94,4 +94,74 @@ class KKLPM_Landing_Page_Meta {
 	public static function get_content( $post_id, $meta_key ) {
 		return (string) get_post_meta( $post_id, $meta_key, true );
 	}
+
+	/**
+	 * Returns translation targets that are not ready to serve as landing pages.
+	 *
+	 * The source page remains the authoritative routing target; every translated
+	 * page must opt into landing mode on its own before the router should use it.
+	 *
+	 * @param int $page_id Source page ID.
+	 * @return array[]
+	 */
+	public static function get_translation_landing_gaps( $page_id ) {
+		$page_id = (int) $page_id;
+
+		if ( $page_id <= 0 || ! class_exists( 'KKLPM_Language_Adapter_Resolver' ) ) {
+			return array();
+		}
+
+		$adapter   = KKLPM_Language_Adapter_Resolver::get_active_adapter();
+		$languages = $adapter instanceof KKLPM_Language_Adapter_Interface ? $adapter->get_available_languages() : array();
+		$gaps      = array();
+
+		if ( empty( $languages ) || ! is_array( $languages ) ) {
+			return array();
+		}
+
+		foreach ( $languages as $lang ) {
+			$lang = is_string( $lang ) ? trim( $lang ) : '';
+
+			if ( '' === $lang ) {
+				continue;
+			}
+
+			$translated_id = $adapter->get_translated_page_id( $page_id, $lang );
+
+			if ( ! is_numeric( $translated_id ) ) {
+				continue;
+			}
+
+			$translated_id = (int) $translated_id;
+
+			if ( $translated_id <= 0 || $translated_id === $page_id ) {
+				continue;
+			}
+
+			$translated_page = get_post( $translated_id );
+
+			if ( ! $translated_page instanceof WP_Post || 'page' !== $translated_page->post_type || 'trash' === $translated_page->post_status ) {
+				$gaps[] = array(
+					'lang'    => $lang,
+					'page_id' => $translated_id,
+					'reason'  => 'invalid',
+					'title'   => '',
+				);
+				continue;
+			}
+
+			if ( self::is_enabled( $translated_id ) ) {
+				continue;
+			}
+
+			$gaps[] = array(
+				'lang'    => $lang,
+				'page_id' => $translated_id,
+				'reason'  => 'not_enabled',
+				'title'   => get_the_title( $translated_id ),
+			);
+		}
+
+		return $gaps;
+	}
 }

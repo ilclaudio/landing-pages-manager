@@ -86,10 +86,21 @@ class KKLPM_Domain_Router_Admin_Page {
 
 		$edit_mapping = $this->get_current_edit_mapping();
 		$mappings     = KKLPM_Domain_Map_Repository::get_all_mappings();
+		$warnings     = $this->get_translation_gap_warnings_for_mappings( $mappings );
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Landing Domain Router', 'landing-pages-manager' ); ?></h1>
 			<?php $this->render_notice(); ?>
+			<?php if ( ! empty( $warnings ) ) : ?>
+				<div class="notice notice-warning">
+					<p><?php esc_html_e( 'Some mapped pages have translations that are not ready as landing pages yet. For those languages, routed requests currently fall back to the mapped source page.', 'landing-pages-manager' ); ?></p>
+					<ul>
+						<?php foreach ( $warnings as $warning ) : ?>
+							<li><?php echo esc_html( $warning ); ?></li>
+						<?php endforeach; ?>
+					</ul>
+				</div>
+			<?php endif; ?>
 
 			<h2><?php echo $edit_mapping ? esc_html__( 'Edit Mapping', 'landing-pages-manager' ) : esc_html__( 'Add Mapping', 'landing-pages-manager' ); ?></h2>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -471,6 +482,81 @@ class KKLPM_Domain_Router_Admin_Page {
 			$page->post_title,
 			$page->ID
 		);
+	}
+
+	/**
+	 * Builds admin-warning lines for mapped pages with incomplete translation landing setup.
+	 *
+	 * @param array[] $mappings Mapping rows.
+	 * @return string[]
+	 */
+	protected function get_translation_gap_warnings_for_mappings( array $mappings ) {
+		$page_ids = array();
+		$warnings = array();
+
+		foreach ( $mappings as $mapping ) {
+			if ( empty( $mapping['page_id'] ) ) {
+				continue;
+			}
+
+			$page_ids[] = (int) $mapping['page_id'];
+		}
+
+		$page_ids = array_values( array_unique( array_filter( $page_ids ) ) );
+
+		foreach ( $page_ids as $page_id ) {
+			$gaps = KKLPM_Landing_Page_Meta::get_translation_landing_gaps( $page_id );
+
+			if ( empty( $gaps ) ) {
+				continue;
+			}
+
+			$warnings[] = sprintf(
+				/* translators: 1: mapped page label, 2: translation gap summary. */
+				__( '%1$s: %2$s', 'landing-pages-manager' ),
+				$this->get_page_label( $page_id ),
+				$this->format_translation_gap_summary( $gaps )
+			);
+		}
+
+		return $warnings;
+	}
+
+	/**
+	 * Formats translation-gap details for admin warnings.
+	 *
+	 * @param array[] $translation_gaps Translation gap rows.
+	 * @return string
+	 */
+	protected function format_translation_gap_summary( array $translation_gaps ) {
+		$parts = array();
+
+		foreach ( $translation_gaps as $gap ) {
+			$lang    = isset( $gap['lang'] ) ? (string) $gap['lang'] : '';
+			$page_id = isset( $gap['page_id'] ) ? (int) $gap['page_id'] : 0;
+			$title   = isset( $gap['title'] ) ? (string) $gap['title'] : '';
+			$reason  = isset( $gap['reason'] ) ? (string) $gap['reason'] : '';
+
+			if ( 'invalid' === $reason ) {
+				$parts[] = sprintf(
+					/* translators: 1: language code, 2: translated page ID. */
+					__( '%1$s -> page #%2$d is missing or invalid', 'landing-pages-manager' ),
+					strtoupper( $lang ),
+					$page_id
+				);
+				continue;
+			}
+
+			$parts[] = sprintf(
+				/* translators: 1: language code, 2: translated page title, 3: translated page ID. */
+				__( '%1$s -> %2$s (#%3$d) has Landing Page disabled', 'landing-pages-manager' ),
+				strtoupper( $lang ),
+				'' !== $title ? $title : __( 'Untitled page', 'landing-pages-manager' ),
+				$page_id
+			);
+		}
+
+		return implode( '; ', $parts );
 	}
 
 	/**

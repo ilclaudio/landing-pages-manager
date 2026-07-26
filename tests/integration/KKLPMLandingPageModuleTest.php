@@ -105,6 +105,10 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 	public function tear_down() {
 		remove_all_filters( 'kklpm_is_block_theme' );
 		remove_all_filters( 'pre_get_block_template' );
+		unset( $GLOBALS['kklpm_test_pll_current_language'] );
+		unset( $GLOBALS['kklpm_test_pll_languages_list'] );
+		unset( $GLOBALS['kklpm_test_pll_translations'] );
+		KKLPM_Language_Adapter_Resolver::reset();
 		$_POST = array();
 		wp_set_current_user( 0 );
 		parent::tear_down();
@@ -500,6 +504,38 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'id="kklpm-landing-wp-assets"', $markup );
 		$this->assertStringContainsString( 'disabled=\'disabled\'', $markup );
 		$this->assertStringContainsString( 'Used only with the isolated landing template.', $markup );
+	}
+
+	/**
+	 * Ensures the meta box warns when translated pages exist but are not enabled as landing pages.
+	 *
+	 * @return void
+	 */
+	public function test_render_meta_box_warns_about_translations_without_landing_enabled() {
+		$post          = $this->create_page_for_administrator();
+		$translated_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'page',
+				'post_status' => 'publish',
+				'post_title'  => 'Pagina Promo IT',
+			)
+		);
+
+		update_post_meta( $post->ID, KKLPM_Landing_Page_Meta::ENABLED, '1' );
+
+		$GLOBALS['kklpm_test_pll_languages_list']   = array( 'it' );
+		$GLOBALS['kklpm_test_pll_translations']     = array(
+			$post->ID => array(
+				'it' => $translated_id,
+			),
+		);
+		$GLOBALS['kklpm_test_pll_current_language'] = 'en';
+		KKLPM_Language_Adapter_Resolver::reset();
+
+		$markup = $this->render_meta_box_markup( $post );
+
+		$this->assertStringContainsString( 'Some translated pages exist but are not ready to be served as landing pages yet.', $markup );
+		$this->assertStringContainsString( 'IT -&gt; Pagina Promo IT (#' . $translated_id . ') has Landing Page disabled', $markup );
 	}
 
 	/**

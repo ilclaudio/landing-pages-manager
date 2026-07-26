@@ -72,6 +72,7 @@ class KKLPM_Landing_Page_Module {
 		$css_content         = KKLPM_Landing_Page_Meta::get_content( $post->ID, KKLPM_Landing_Page_Meta::CSS );
 		$js_content          = KKLPM_Landing_Page_Meta::get_content( $post->ID, KKLPM_Landing_Page_Meta::JS );
 		$can_edit_raw        = current_user_can( 'unfiltered_html' );
+		$translation_gaps    = $enabled ? KKLPM_Landing_Page_Meta::get_translation_landing_gaps( $post->ID ) : array();
 
 		wp_nonce_field( self::NONCE_ACTION, self::NONCE_NAME );
 		?>
@@ -94,6 +95,16 @@ class KKLPM_Landing_Page_Module {
 			<p>
 				<?php esc_html_e( 'Custom HTML, CSS, and JavaScript fields are available only to users with the unfiltered_html capability.', 'landing-pages-manager' ); ?>
 			</p>
+		<?php endif; ?>
+		<?php if ( ! empty( $translation_gaps ) ) : ?>
+			<div class="notice notice-warning inline">
+				<p>
+					<?php esc_html_e( 'Some translated pages exist but are not ready to be served as landing pages yet. Until each translation enables Landing Page, routed requests for those languages will fall back to this source page.', 'landing-pages-manager' ); ?>
+				</p>
+				<p>
+					<?php echo esc_html( $this->format_translation_gap_summary( $translation_gaps ) ); ?>
+				</p>
+			</div>
 		<?php endif; ?>
 		<div id="kklpm-landing-fields" <?php echo $enabled ? '' : 'hidden'; ?>>
 			<p>
@@ -308,5 +319,42 @@ class KKLPM_Landing_Page_Module {
 	protected function update_raw_meta_field( $post_id, $meta_key, $input_name ) {
 		$value = isset( $_POST[ $input_name ] ) ? wp_unslash( $_POST[ $input_name ] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce is verified in can_save_meta_box(); raw content is intentionally stored for users with unfiltered_html.
 		update_post_meta( $post_id, $meta_key, $value );
+	}
+
+	/**
+	 * Formats translation-gap details for the landing page editor notice.
+	 *
+	 * @param array[] $translation_gaps Translation gap rows.
+	 * @return string
+	 */
+	protected function format_translation_gap_summary( array $translation_gaps ) {
+		$parts = array();
+
+		foreach ( $translation_gaps as $gap ) {
+			$lang    = isset( $gap['lang'] ) ? (string) $gap['lang'] : '';
+			$page_id = isset( $gap['page_id'] ) ? (int) $gap['page_id'] : 0;
+			$title   = isset( $gap['title'] ) ? (string) $gap['title'] : '';
+			$reason  = isset( $gap['reason'] ) ? (string) $gap['reason'] : '';
+
+			if ( 'invalid' === $reason ) {
+				$parts[] = sprintf(
+					/* translators: 1: language code, 2: translated page ID. */
+					__( '%1$s -> page #%2$d is missing or invalid', 'landing-pages-manager' ),
+					strtoupper( $lang ),
+					$page_id
+				);
+				continue;
+			}
+
+			$parts[] = sprintf(
+				/* translators: 1: language code, 2: translated page title, 3: translated page ID. */
+				__( '%1$s -> %2$s (#%3$d) has Landing Page disabled', 'landing-pages-manager' ),
+				strtoupper( $lang ),
+				'' !== $title ? $title : __( 'Untitled page', 'landing-pages-manager' ),
+				$page_id
+			);
+		}
+
+		return implode( '; ', $parts );
 	}
 }

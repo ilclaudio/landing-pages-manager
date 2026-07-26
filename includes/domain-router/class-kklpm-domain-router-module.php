@@ -77,19 +77,18 @@ class KKLPM_Domain_Router_Module {
 		}
 
 		$page_id = isset( $match['page_id'] ) ? (int) $match['page_id'] : 0;
-		$page    = $page_id ? get_post( $page_id ) : null;
 
 		if ( $this->is_colliding_subpath_mapping( $match, $normalized_path, $page_id ) ) {
 			return null;
 		}
 
-		if ( ! $page instanceof WP_Post || 'page' !== $page->post_type || 'trash' === $page->post_status ) {
+		if ( ! $this->is_valid_routed_page( $page_id ) ) {
 			return false;
 		}
 
 		$this->maybe_log_non_landing_mapping_warning( $match, $page_id, $host, $normalized_path );
 
-		return $this->resolve_translated_page_id( $page_id );
+		return $this->resolve_translated_page_id( $page_id, $match, $host, $normalized_path );
 	}
 
 	/**
@@ -147,10 +146,13 @@ class KKLPM_Domain_Router_Module {
 	 * Falls back to the source page ID when no multilingual plugin is active,
 	 * or when the active adapter has no translation for the current language.
 	 *
-	 * @param int $page_id Source page ID matched by the router.
+	 * @param int    $page_id         Source page ID matched by the router.
+	 * @param array  $matched_mapping Matched mapping row.
+	 * @param string $host            Request host.
+	 * @param string $normalized_path Normalized request path.
 	 * @return int
 	 */
-	protected function resolve_translated_page_id( $page_id ) {
+	protected function resolve_translated_page_id( $page_id, array $matched_mapping, $host, $normalized_path ) {
 		$adapter = KKLPM_Language_Adapter_Resolver::get_active_adapter();
 		$lang    = $this->get_language_override();
 
@@ -164,7 +166,97 @@ class KKLPM_Domain_Router_Module {
 
 		$translated_id = $adapter->get_translated_page_id( $page_id, $lang );
 
-		return null !== $translated_id ? $translated_id : $page_id;
+		if ( null === $translated_id || (int) $translated_id === (int) $page_id ) {
+			return $page_id;
+		}
+
+		$translated_id = (int) $translated_id;
+
+		if ( ! $this->is_valid_routed_page( $translated_id ) ) {
+			$this->maybe_log_invalid_translated_page_warning( $matched_mapping, $page_id, $translated_id, $lang, $host, $normalized_path );
+
+			return $page_id;
+		}
+
+		if ( ! KKLPM_Landing_Page_Meta::is_enabled( $translated_id ) ) {
+			$this->maybe_log_non_landing_translation_warning( $matched_mapping, $page_id, $translated_id, $lang, $host, $normalized_path );
+
+			return $page_id;
+		}
+
+		return $translated_id;
+	}
+
+	/**
+	 * Whether a page ID can be served safely by the router.
+	 *
+	 * @param int $page_id Page ID.
+	 * @return bool
+	 */
+	protected function is_valid_routed_page( $page_id ) {
+		$page = $page_id ? get_post( $page_id ) : null;
+
+		return $page instanceof WP_Post && 'page' === $page->post_type && 'trash' !== $page->post_status;
+	}
+
+	/**
+	 * Logs a warning when a translated page cannot be served safely.
+	 *
+	 * @param array  $matched_mapping Matched mapping row.
+	 * @param int    $source_page_id  Source page ID.
+	 * @param int    $translated_id   Translated page ID returned by the adapter.
+	 * @param string $lang            Requested language code.
+	 * @param string $host            Request host.
+	 * @param string $normalized_path Normalized request path.
+	 * @return void
+	 */
+	protected function maybe_log_invalid_translated_page_warning( array $matched_mapping, $source_page_id, $translated_id, $lang, $host, $normalized_path ) {
+		if ( ! $this->should_log_non_landing_mapping_warning() ) {
+			return;
+		}
+
+		$this->write_warning_log(
+			sprintf(
+				'KKLPM warning: translation fallback to source page %1$d because translated page %2$d for language "%3$s" is invalid for mapping "%4$s:%5$s". Request host="%6$s" path="%7$s".',
+				(int) $source_page_id,
+				(int) $translated_id,
+				(string) $lang,
+				isset( $matched_mapping['type'] ) ? (string) $matched_mapping['type'] : '',
+				isset( $matched_mapping['value'] ) ? (string) $matched_mapping['value'] : '',
+				(string) $host,
+				(string) $normalized_path
+			)
+		);
+	}
+
+	/**
+	 * Logs a warning when a translated page exists but is not configured as a landing page.
+	 *
+	 * @param array  $matched_mapping Matched mapping row.
+	 * @param int    $source_page_id  Source page ID.
+	 * @param int    $translated_id   Translated page ID returned by the adapter.
+	 * @param string $lang            Requested language code.
+	 * @param string $host            Request host.
+	 * @param string $normalized_path Normalized request path.
+	 * @return void
+	 */
+	protected function maybe_log_non_landing_translation_warning( array $matched_mapping, $source_page_id, $translated_id, $lang, $host, $normalized_path ) {
+		if ( ! $this->should_log_non_landing_mapping_warning() ) {
+			return;
+		}
+
+		$this->write_warning_log(
+			sprintf(
+				'KKLPM warning: translation fallback to source page %1$d because translated page %2$d for language "%3$s" is not enabled as a landing page for mapping "%4$s:%5$s". Request host="%6$s" path="%7$s".',
+				(int) $source_page_id,
+				(int) $translated_id,
+				(string) $lang,
+				isset( $matched_mapping['type'] ) ? (string) $matched_mapping['type'] : '',
+				isset( $matched_mapping['value'] ) ? (string) $matched_mapping['value'] : '',
+				(string) $host,
+				(string) $normalized_path
+			)
+		);
 	}
 
 	/**
