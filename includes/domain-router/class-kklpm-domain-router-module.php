@@ -20,13 +20,34 @@ class KKLPM_Domain_Router_Module {
 	const MATCHED_RULE = 'kklpm-domain-router';
 
 	/**
+	 * Query var holding the mapped source page ID for the current routed request.
+	 *
+	 * Always the page a mapping was configured against, even when the
+	 * request actually renders a translated page. Mappings are keyed by
+	 * source page, so canonical lookups must use this, not the resolved ID.
+	 *
+	 * @var string
+	 */
+	const SOURCE_PAGE_ID_QUERY_VAR = 'kklpm_source_page_id';
+
+	/**
+	 * Query var holding the final resolved page ID for the current routed request.
+	 *
+	 * The page ID actually applied to the main query — the source page, or
+	 * its translation when one was resolved.
+	 *
+	 * @var string
+	 */
+	const RESOLVED_PAGE_ID_QUERY_VAR = 'kklpm_resolved_page_id';
+
+	/**
 	 * Registers module hooks.
 	 *
 	 * @return void
 	 */
 	public function register() {
 		add_action( 'parse_request', array( $this, 'handle_parse_request' ) );
-		add_action( 'wp_head', array( $this, 'render_current_request_canonical_tag' ), 1 );
+		add_filter( 'get_canonical_url', array( $this, 'filter_canonical_url' ) );
 	}
 
 	/**
@@ -40,24 +61,28 @@ class KKLPM_Domain_Router_Module {
 			return;
 		}
 
-		$host        = $this->get_request_host();
-		$path        = $this->get_request_path( $wp );
-		$resolved_id = $this->resolve_target_page_id( $host, $path );
+		$host    = $this->get_request_host();
+		$path    = $this->get_request_path( $wp );
+		$context = $this->resolve_target_page_context( $host, $path );
 
-		if ( null === $resolved_id ) {
+		if ( null === $context ) {
 			return;
 		}
 
-		if ( false === $resolved_id ) {
+		if ( false === $context ) {
 			$this->apply_not_found( $wp );
 			return;
 		}
 
-		$this->apply_page_request( $wp, $resolved_id );
+		$this->apply_page_request( $wp, $context['source_page_id'], $context['resolved_page_id'] );
 	}
 
 	/**
 	 * Resolve the landing page ID for the current host/path pair.
+	 *
+	 * Thin convenience wrapper around resolve_target_page_context() for
+	 * callers that only need the final resolved page ID, not the source page
+	 * a translated result was resolved from.
 	 *
 	 * Returns:
 	 * - `null` when no mapping matches the request
@@ -69,6 +94,33 @@ class KKLPM_Domain_Router_Module {
 	 * @return int|false|null
 	 */
 	public function resolve_target_page_id( $host, $path ) {
+		$context = $this->resolve_target_page_context( $host, $path );
+
+		if ( ! is_array( $context ) ) {
+			return $context;
+		}
+
+		return $context['resolved_page_id'];
+	}
+
+	/**
+	 * Resolve the landing page context for the current host/path pair.
+	 *
+	 * Unlike resolve_target_page_id(), this also exposes the mapped source
+	 * page ID alongside the final (possibly translated) resolved page ID, so
+	 * callers that need to look up mappings — which are always keyed by the
+	 * source page, never by a translated page — do not have to re-derive it.
+	 *
+	 * Returns:
+	 * - `null` when no mapping matches the request
+	 * - `false` when a mapping matches but its target page is invalid
+	 * - `array{source_page_id: int, resolved_page_id: int}` when a valid target page exists
+	 *
+	 * @param string $host Request host.
+	 * @param string $path Request path.
+	 * @return array|false|null
+	 */
+	protected function resolve_target_page_context( $host, $path ) {
 		$normalized_path = KKLPM_Domain_Router_Matcher::normalize_request_path( $path );
 		$match           = $this->find_matching_mapping( $host, $normalized_path );
 
@@ -88,7 +140,10 @@ class KKLPM_Domain_Router_Module {
 
 		$this->maybe_log_non_landing_mapping_warning( $match, $page_id, $host, $normalized_path );
 
-		return $this->resolve_translated_page_id( $page_id, $match, $host, $normalized_path );
+		return array(
+			'source_page_id'   => $page_id,
+			'resolved_page_id' => $this->resolve_translated_page_id( $page_id, $match, $host, $normalized_path ),
+		);
 	}
 
 	/**
@@ -281,21 +336,24 @@ class KKLPM_Domain_Router_Module {
 	/**
 	 * Apply a resolved page request to the main `WP` object.
 	 *
-	 * @param WP  $wp      Current WordPress request object.
-	 * @param int $page_id Target page ID.
+	 * @param WP  $wp               Current WordPress request object.
+	 * @param int $source_page_id   Mapped source page ID (owner of the mapping table row).
+	 * @param int $resolved_page_id Final page ID to actually render (source or its translation).
 	 * @return void
 	 */
-	public function apply_page_request( $wp, $page_id ) {
-		$page_path         = get_page_uri( $page_id );
+	public function apply_page_request( $wp, $source_page_id, $resolved_page_id ) {
+		$page_path         = get_page_uri( $resolved_page_id );
 		$wp->query_vars    = array(
-			'page_id'   => $page_id,
-			'pagename'  => $page_path,
-			'post_type' => 'page',
+			'page_id'                        => $resolved_page_id,
+			'pagename'                       => $page_path,
+			'post_type'                      => 'page',
+			self::SOURCE_PAGE_ID_QUERY_VAR   => (int) $source_page_id,
+			self::RESOLVED_PAGE_ID_QUERY_VAR => (int) $resolved_page_id,
 		);
-		$wp->query_string  = 'page_id=' . $page_id;
+		$wp->query_string  = 'page_id=' . $resolved_page_id;
 		$wp->request       = $page_path;
 		$wp->matched_rule  = self::MATCHED_RULE;
-		$wp->matched_query = 'page_id=' . $page_id;
+		$wp->matched_query = 'page_id=' . $resolved_page_id;
 		$wp->did_permalink = true;
 
 		unset( $wp->query_vars['error'] );
@@ -317,16 +375,46 @@ class KKLPM_Domain_Router_Module {
 	}
 
 	/**
-	 * Renders a canonical tag for the current front-end page request when needed.
+	 * Overrides WordPress core's canonical URL for the current routed request.
 	 *
-	 * @return void
+	 * Hooked on `get_canonical_url`, WP core's own canonical extension point
+	 * (applied by `wp_get_canonical_url()`, consumed by `rel_canonical()` on
+	 * `wp_head`). Integrating here — instead of printing a second tag
+	 * directly on `wp_head` — guarantees exactly one canonical tag whenever
+	 * `wp_head()` runs, letting WP core (or any theme/plugin that also
+	 * respects this filter) do the actual printing.
+	 *
+	 * @param string $canonical_url Canonical URL WordPress core computed.
+	 * @return string
 	 */
-	public function render_current_request_canonical_tag() {
-		if ( ! is_singular( 'page' ) ) {
-			return;
+	public function filter_canonical_url( $canonical_url ) {
+		$override = self::get_canonical_url_for_request();
+
+		return '' !== $override ? $override : $canonical_url;
+	}
+
+	/**
+	 * Resolves the canonical URL for the current routed request.
+	 *
+	 * Single source of truth for "which page ID do I resolve the canonical
+	 * from" for the current request, so no call site has to guess or
+	 * re-derive it independently. Mappings — and therefore canonical
+	 * ownership — always belong to the source page a request was routed
+	 * from (see SOURCE_PAGE_ID_QUERY_VAR), never to a translated page
+	 * resolved at runtime, even when the translation is what actually
+	 * renders.
+	 *
+	 * @return string Empty string when the current request is not KKLPM-routed
+	 *                or has no resolvable canonical.
+	 */
+	public static function get_canonical_url_for_request() {
+		$source_page_id = (int) get_query_var( self::SOURCE_PAGE_ID_QUERY_VAR, 0 );
+
+		if ( $source_page_id <= 0 ) {
+			return '';
 		}
 
-		self::render_canonical_tag_for_page( get_queried_object_id() );
+		return self::get_canonical_url_for_page( $source_page_id );
 	}
 
 	/**
@@ -367,6 +455,53 @@ class KKLPM_Domain_Router_Module {
 	 */
 	public static function render_canonical_tag_for_page( $page_id ) {
 		$canonical_url = self::get_canonical_url_for_page( $page_id );
+
+		if ( '' === $canonical_url ) {
+			return;
+		}
+
+		printf(
+			'<link rel="canonical" href="%s" />' . "\n",
+			esc_url( $canonical_url )
+		);
+	}
+
+	/**
+	 * Resolves the canonical URL for the isolated template branch, which
+	 * skips `wp_head()` (and therefore the `get_canonical_url` filter
+	 * integration) entirely and must print its own tag directly.
+	 *
+	 * Prefers the current routed request's mapped source page — correct
+	 * even when a translation is what actually renders — and falls back to
+	 * a direct lookup on the given page ID for requests that were not
+	 * served through the Domain Router (e.g. a mapped landing page visited
+	 * directly via its native permalink).
+	 *
+	 * @param int $fallback_page_id Page ID to use when the request isn't routed.
+	 * @return string
+	 */
+	public static function get_canonical_url_for_current_page( $fallback_page_id ) {
+		$canonical_url = self::get_canonical_url_for_request();
+
+		if ( '' !== $canonical_url ) {
+			return $canonical_url;
+		}
+
+		return self::get_canonical_url_for_page( $fallback_page_id );
+	}
+
+	/**
+	 * Renders a canonical link tag for the current page request, preferring
+	 * the routed request's mapped source page over the given fallback ID.
+	 *
+	 * Intended for the isolated landing page template branch — see
+	 * get_canonical_url_for_current_page() for the resolution order.
+	 *
+	 * @param int $fallback_page_id Page ID to use when the request isn't routed.
+	 * @return void
+	 */
+	public static function render_canonical_tag_for_current_page( $fallback_page_id ) {
+		$canonical_url = self::get_canonical_url_for_current_page( $fallback_page_id );
 
 		if ( '' === $canonical_url ) {
 			return;
@@ -475,10 +610,14 @@ class KKLPM_Domain_Router_Module {
 	/**
 	 * Builds the absolute front-end URL represented by a mapping.
 	 *
+	 * Single shared source of truth for mapping-to-URL construction, used by
+	 * both the runtime canonical resolver and the admin "Copy link" action, so
+	 * the two never diverge on scheme-fallback behavior again.
+	 *
 	 * @param array $mapping Mapping data.
 	 * @return string
 	 */
-	protected static function build_mapping_url( array $mapping ) {
+	public static function build_mapping_url( array $mapping ) {
 		$type  = isset( $mapping['type'] ) ? (string) $mapping['type'] : '';
 		$value = isset( $mapping['value'] ) ? (string) $mapping['value'] : '';
 

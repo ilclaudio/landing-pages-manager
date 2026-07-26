@@ -6,9 +6,9 @@ A standalone WordPress plugin that turns any page into a landing page with an is
 
 When a page is enabled as a landing page, the plugin serves an isolated HTML document instead of the active theme's template. By default it does not call `wp_head()` / `wp_footer()`, so no theme or third-party CSS/JS loads unless you explicitly opt in. The page's HTML, CSS, and JavaScript are managed as free-form content stored on the page itself.
 
-The **Domain Router** lets a landing page be reached through a subdomain, a subpath, or an entirely external domain, while keeping the original URL in the browser — no redirect is involved. The plugin only handles the WordPress-side routing; DNS and web server configuration remain the site administrator's responsibility.
+The **Domain Router** lets a landing page be reached through a subdomain, a subpath, or an entirely external domain, while keeping the original URL in the browser — no redirect is involved. The plugin only handles the WordPress-side routing (DNS and web server setup are configured separately, see Usage below); a mapping pointing to a deleted or disabled page falls back to a 404 instead of silently serving the wrong content.
 
-When the same landing page is reachable through multiple hosts, one mapping can be marked as **canonical**. The plugin then emits a `<link rel="canonical">` tag for that page, while still serving the requested host without redirecting the visitor.
+When the same landing page is reachable through multiple hosts, one mapping can be marked as **canonical**. The plugin resolves a single canonical URL for it — always from the mapped source page, even when a multilingual adapter serves a translated version — and emits exactly one `<link rel="canonical">` tag, integrating with WordPress core's own canonical output instead of printing a second one. Without a canonical mapping, it falls back to the page's native permalink.
 
 Multilingual support follows an **adapter-first** model: KKLPM ships one adapter per supported plugin (WPML, Polylang, TranslatePress, Weglot, MultilingualPress), each able to detect whether its own plugin is active. At runtime only the adapter matching whichever plugin is actually active on the site is used — the others are simply not selected, not deleted or disabled. If none of them is active, a built-in Null adapter keeps routing behaving exactly as in a single-language site. See [DOC/GestioneMultilingua.md](DOC/GestioneMultilingua.md) for the full behavior (Italian).
 
@@ -34,7 +34,7 @@ Multilingual support follows an **adapter-first** model: KKLPM ships one adapter
 **Route a custom domain to the page**
 1. Go to **Settings → Landing Domain Router**, or use the **Manage routes** link on the Plugins list or inside the Landing Page meta box.
 2. Add a mapping: choose a type (subdomain, subpath, or external domain), a value, and the target page.
-3. Optionally mark one mapping for that page as **canonical** if search engines should treat that host/path as the official URL for the content.
+3. Optionally mark one mapping as **canonical** (see above) when this page has more than one mapped host.
 4. Configure DNS and your web server so requests for that host reach this WordPress installation — the plugin does not automate DNS or virtual host setup.
 
 In the standard admin flow, the router does not expose a per-mapping language field: multilingual resolution is adapter-driven, not based on manually creating one route per language. A visitor can still request a specific language explicitly, or a landing page can offer a manual language switcher, via the `?kklpm_lang=xx` parameter — see [DOC/GestioneMultilingua.md](DOC/GestioneMultilingua.md) for the pattern.
@@ -48,7 +48,7 @@ Access is controlled by two capabilities: `kklpm_manage_landing_pages` (Administ
 ```bash
 composer install
 
-composer lint       # PHP_CodeSniffer (WordPress Coding Standards)
+composer lint        # PHP_CodeSniffer (WordPress Coding Standards)
 composer lint:fix    # Auto-fix what PHPCBF can safely fix
 
 composer test:unit         # Plain PHPUnit, no WordPress bootstrap

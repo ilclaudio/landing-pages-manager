@@ -39,6 +39,8 @@ class KKLPMDomainRouterModuleTest extends WP_UnitTestCase {
 		$this->truncate_domain_map_table();
 		unset( $_SERVER['HTTP_HOST'] );
 		$this->set_permalink_structure( '' );
+		set_query_var( KKLPM_Domain_Router_Module::SOURCE_PAGE_ID_QUERY_VAR, '' );
+		set_query_var( KKLPM_Domain_Router_Module::RESOLVED_PAGE_ID_QUERY_VAR, '' );
 		parent::tear_down();
 	}
 
@@ -296,6 +298,195 @@ class KKLPMDomainRouterModuleTest extends WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'page_id', $wp->query_vars );
 		$this->assertSame( 'promo', $wp->query_vars['pagename'] );
 		$this->assertNotSame( $target_page_id, $native_post_id );
+	}
+
+	/**
+	 * Ensures get_canonical_url_for_request() overrides nothing when the
+	 * current request was not routed by the Domain Router.
+	 *
+	 * @return void
+	 */
+	public function test_get_canonical_url_for_request_returns_empty_when_not_routed() {
+		$this->assertSame( '', KKLPM_Domain_Router_Module::get_canonical_url_for_request() );
+	}
+
+	/**
+	 * Ensures get_canonical_url_for_request() resolves the canonical mapping
+	 * belonging to the routed request's mapped source page.
+	 *
+	 * @return void
+	 */
+	public function test_get_canonical_url_for_request_resolves_canonical_from_source_page() {
+		$source_page_id = $this->create_published_page( 'source-page' );
+
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'         => 'external',
+				'value'        => 'landing.example.net',
+				'page_id'      => $source_page_id,
+				'active'       => 1,
+				'is_canonical' => 1,
+			)
+		);
+
+		set_query_var( KKLPM_Domain_Router_Module::SOURCE_PAGE_ID_QUERY_VAR, $source_page_id );
+
+		$this->assertSame(
+			'http://landing.example.net/',
+			KKLPM_Domain_Router_Module::get_canonical_url_for_request()
+		);
+	}
+
+	/**
+	 * Ensures get_canonical_url_for_request() falls back to the source
+	 * page's native permalink when no mapping is marked canonical.
+	 *
+	 * @return void
+	 */
+	public function test_get_canonical_url_for_request_falls_back_to_permalink_without_canonical_mapping() {
+		$source_page_id = $this->create_published_page( 'source-page' );
+
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'         => 'subpath',
+				'value'        => '/promo',
+				'page_id'      => $source_page_id,
+				'active'       => 1,
+				'is_canonical' => 0,
+			)
+		);
+
+		set_query_var( KKLPM_Domain_Router_Module::SOURCE_PAGE_ID_QUERY_VAR, $source_page_id );
+
+		$this->assertSame(
+			get_permalink( $source_page_id ),
+			KKLPM_Domain_Router_Module::get_canonical_url_for_request()
+		);
+	}
+
+	/**
+	 * Ensures a translated page resolved at runtime still finds its
+	 * canonical through the mapped source page, never through its own ID —
+	 * mappings are always keyed by the source page.
+	 *
+	 * @return void
+	 */
+	public function test_get_canonical_url_for_request_ignores_resolved_page_id_for_lookup() {
+		$source_page_id     = $this->create_published_page( 'source-page' );
+		$translated_page_id = $this->create_published_page( 'translated-page' );
+
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'         => 'external',
+				'value'        => 'landing.example.net',
+				'page_id'      => $source_page_id,
+				'active'       => 1,
+				'is_canonical' => 1,
+			)
+		);
+
+		set_query_var( KKLPM_Domain_Router_Module::SOURCE_PAGE_ID_QUERY_VAR, $source_page_id );
+		set_query_var( KKLPM_Domain_Router_Module::RESOLVED_PAGE_ID_QUERY_VAR, $translated_page_id );
+
+		// The translated page has no mapping of its own; a lookup keyed on
+		// the resolved ID instead of the source ID would return '' here.
+		$this->assertSame(
+			'http://landing.example.net/',
+			KKLPM_Domain_Router_Module::get_canonical_url_for_request()
+		);
+	}
+
+	/**
+	 * Ensures filter_canonical_url() leaves WordPress core's value untouched
+	 * when the current request was not routed by the Domain Router.
+	 *
+	 * @return void
+	 */
+	public function test_filter_canonical_url_passes_through_when_not_routed() {
+		$this->assertSame(
+			'https://core.example.org/unrelated/',
+			$this->module->filter_canonical_url( 'https://core.example.org/unrelated/' )
+		);
+	}
+
+	/**
+	 * Ensures filter_canonical_url() overrides WordPress core's value with
+	 * the routed request's resolved canonical.
+	 *
+	 * @return void
+	 */
+	public function test_filter_canonical_url_overrides_when_routed() {
+		$source_page_id = $this->create_published_page( 'source-page' );
+
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'         => 'external',
+				'value'        => 'landing.example.net',
+				'page_id'      => $source_page_id,
+				'active'       => 1,
+				'is_canonical' => 1,
+			)
+		);
+
+		set_query_var( KKLPM_Domain_Router_Module::SOURCE_PAGE_ID_QUERY_VAR, $source_page_id );
+
+		$this->assertSame(
+			'http://landing.example.net/',
+			$this->module->filter_canonical_url( 'https://core.example.org/unrelated/' )
+		);
+	}
+
+	/**
+	 * Ensures the isolated-template helper prefers the routed request's
+	 * mapped source page over the given fallback page ID.
+	 *
+	 * @return void
+	 */
+	public function test_get_canonical_url_for_current_page_prefers_routed_request_over_fallback() {
+		$source_page_id    = $this->create_published_page( 'source-page' );
+		$unrelated_page_id = $this->create_published_page( 'unrelated-page' );
+
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'         => 'external',
+				'value'        => 'landing.example.net',
+				'page_id'      => $source_page_id,
+				'active'       => 1,
+				'is_canonical' => 1,
+			)
+		);
+
+		set_query_var( KKLPM_Domain_Router_Module::SOURCE_PAGE_ID_QUERY_VAR, $source_page_id );
+
+		$this->assertSame(
+			'http://landing.example.net/',
+			KKLPM_Domain_Router_Module::get_canonical_url_for_current_page( $unrelated_page_id )
+		);
+	}
+
+	/**
+	 * Ensures the isolated-template helper falls back to a direct lookup on
+	 * the given page ID when the current request was not routed.
+	 *
+	 * @return void
+	 */
+	public function test_get_canonical_url_for_current_page_falls_back_when_not_routed() {
+		$page_id = $this->create_published_page( 'source-page' );
+
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'         => 'external',
+				'value'        => 'landing.example.net',
+				'page_id'      => $page_id,
+				'active'       => 1,
+				'is_canonical' => 1,
+			)
+		);
+
+		$this->assertSame(
+			'http://landing.example.net/',
+			KKLPM_Domain_Router_Module::get_canonical_url_for_current_page( $page_id )
+		);
 	}
 
 	/**

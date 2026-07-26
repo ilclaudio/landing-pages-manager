@@ -775,11 +775,14 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Ensures the template can emit a fallback canonical via wp_head() when assets are enabled.
+	 * Ensures the template emits exactly one canonical tag via wp_head() —
+	 * WordPress core's own rel_canonical(), not a second KKLPM-printed tag —
+	 * falling back to the page's native permalink when the visited URL was
+	 * not itself matched by the Domain Router.
 	 *
 	 * @return void
 	 */
-	public function test_landing_page_template_outputs_fallback_canonical_via_wp_head() {
+	public function test_landing_page_template_outputs_single_canonical_tag_via_wp_head() {
 		$post = $this->create_page_for_administrator();
 		update_post_meta( $post->ID, KKLPM_Landing_Page_Meta::WP_ASSETS, '1' );
 
@@ -801,10 +804,49 @@ class KKLPMLandingPageModuleTest extends WP_UnitTestCase {
 
 		add_action( 'wp_head', 'print_emoji_detection_script', 7 );
 
-		$this->assertStringContainsString(
-			'<link rel="canonical" href="' . esc_url( get_permalink( $post ) ) . '" />',
-			$markup
+		$expected_tag = '<link rel="canonical" href="' . esc_url( get_permalink( $post ) ) . '" />';
+
+		$this->assertSame( 1, substr_count( $markup, $expected_tag ) );
+	}
+
+	/**
+	 * Ensures a request actually routed through a mapped URL emits exactly
+	 * one canonical tag via wp_head(), using the mapping's canonical URL —
+	 * not the page's native permalink — confirming both the duplicate-tag
+	 * fix and the source-page-aware canonical lookup together.
+	 *
+	 * @return void
+	 */
+	public function test_landing_page_template_outputs_single_mapped_canonical_for_routed_request_via_wp_head() {
+		$post = $this->create_page_for_administrator();
+		update_post_meta( $post->ID, KKLPM_Landing_Page_Meta::WP_ASSETS, '1' );
+
+		KKLPM_Domain_Map_Repository::insert_mapping(
+			array(
+				'type'         => 'subpath',
+				'value'        => '/promo',
+				'page_id'      => $post->ID,
+				'active'       => 1,
+				'is_canonical' => 1,
+			)
 		);
+
+		// A pretty permalink structure is required so WP's own rewrite
+		// matching populates $wp->request for a path with no real underlying
+		// content, before the Domain Router hook gets a chance to run.
+		$this->set_permalink_structure( '/%postname%/' );
+
+		remove_action( 'wp_head', 'print_emoji_detection_script', 7 );
+		$this->setExpectedIncorrectUsage( 'wp_maybe_inline_styles' );
+		$this->go_to( home_url( '/promo/' ) );
+
+		$markup = $this->render_landing_template( $post );
+
+		add_action( 'wp_head', 'print_emoji_detection_script', 7 );
+
+		$expected_tag = '<link rel="canonical" href="' . esc_url( home_url( '/promo' ) ) . '" />';
+
+		$this->assertSame( 1, substr_count( $markup, $expected_tag ) );
 	}
 
 	/**

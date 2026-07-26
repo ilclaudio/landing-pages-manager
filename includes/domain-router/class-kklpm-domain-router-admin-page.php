@@ -264,7 +264,7 @@ class KKLPM_Domain_Router_Admin_Page {
 										<?php esc_html_e( 'Delete', 'landing-pages-manager' ); ?>
 									</a>
 									|
-									<a href="#" class="kklpm-copy-link" data-link="<?php echo esc_url( $this->get_mapping_full_url( $mapping ) ); ?>">
+									<a href="#" class="kklpm-copy-link" data-link="<?php echo esc_url( KKLPM_Domain_Router_Module::build_mapping_url( $mapping ) ); ?>">
 										<?php esc_html_e( 'Copy link', 'landing-pages-manager' ); ?>
 									</a>
 								</td>
@@ -557,25 +557,6 @@ class KKLPM_Domain_Router_Admin_Page {
 		}
 
 		return implode( '; ', $parts );
-	}
-
-	/**
-	 * Builds the full front-end URL a mapping resolves to.
-	 *
-	 * @param array $mapping Mapping data.
-	 * @return string
-	 */
-	protected function get_mapping_full_url( array $mapping ) {
-		$type  = isset( $mapping['type'] ) ? (string) $mapping['type'] : '';
-		$value = isset( $mapping['value'] ) ? (string) $mapping['value'] : '';
-
-		if ( 'subpath' === $type ) {
-			return home_url( $value );
-		}
-
-		$scheme = is_ssl() ? 'https' : 'http';
-
-		return $scheme . '://' . $value . '/';
 	}
 
 	/**
